@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GUNSHIP REDUX — Unit Model Viewer</title>
+<style>
+  :root{
+    --bg: #12140f;
+    --panel: #191c14;
+    --panel-line: #33391f;
+    --ink: #d9e0c4;
+    --ink-dim: #8a9270;
+    --amber: #c9a227;
+    --amber-dim: #7a6a2a;
+    --green: #7fae3f;
+    --red: #b5482f;
+    --mono: "IBM Plex Mono", "Consolas", monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--mono);overflow:hidden;}
+  #app{display:flex;height:100%;}
+
+  /* ---------- viewport ---------- */
+  #viewport{position:relative;flex:1;min-width:0;}
+  #scene{display:block;width:100%;height:100%;cursor:grab;}
+  #scene.dragging{cursor:grabbing;}
+
+  #crosshair{position:absolute;inset:0;pointer-events:none;opacity:0.5;}
+  #hud-corners span{position:absolute;width:22px;height:22px;border:1px solid var(--amber-dim);opacity:0.8;}
+  #hud-corners .tl{top:14px;left:14px;border-right:none;border-bottom:none;}
+  #hud-corners .tr{top:14px;right:14px;border-left:none;border-bottom:none;}
+  #hud-corners .bl{bottom:14px;left:14px;border-right:none;border-top:none;}
+  #hud-corners .br{bottom:14px;right:14px;border-left:none;border-top:none;}
+
+  #model-tag{
+    position:absolute; top:16px; left:50%; transform:translateX(-50%);
+    text-align:center; pointer-events:none;
+  }
+  #model-tag .kind{font-size:11px;letter-spacing:0.14em;color:var(--amber-dim);}
+  #model-tag .name{font-size:19px;color:var(--amber);margin-top:2px;}
+
+  #footer-readout{
+    position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+    font-size:11px; color:var(--ink-dim); letter-spacing:0.06em; pointer-events:none;
+  }
+
+  #error-banner{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    max-width:70%; padding:14px 18px; border:1px solid var(--red); background:#1f1210;
+    color:#e2a08c; font-size:12.5px; line-height:1.5; display:none; white-space:pre-wrap;
+  }
+
+  /* ---------- side panel ---------- */
+  #panel{
+    width:340px; flex:none; background:var(--panel); border-left:1px solid var(--panel-line);
+    display:flex; flex-direction:column; height:100%;
+  }
+  #panel-scroll{overflow-y:auto; flex:1; padding:18px 18px 8px 18px;}
+  #panel-header{
+    padding:16px 18px 12px 18px; border-bottom:1px solid var(--panel-line);
+  }
+  #panel-header .title{font-size:13px; letter-spacing:0.12em; color:var(--amber);}
+  #panel-header .sub{font-size:10.5px; color:var(--ink-dim); margin-top:3px;}
+
+  .group{margin-bottom:20px;}
+  .group-label{font-size:10.5px; letter-spacing:0.1em; color:var(--ink-dim); margin-bottom:6px;}
+
+  select, button{
+    width:100%; background:#0e1009; color:var(--ink); border:1px solid var(--panel-line);
+    font-family:var(--mono); font-size:12.5px; padding:8px 10px; border-radius:2px;
+  }
+  select:focus, button:focus{outline:1px solid var(--amber-dim);}
+  select{cursor:pointer;}
+  button{cursor:pointer; margin-top:8px; color:var(--ink);}
+  button:hover{border-color:var(--amber-dim); color:var(--amber);}
+  button:active{background:#161b0e;}
+  button.primary{color:var(--amber); border-color:var(--amber-dim);}
+
+  .row2{display:flex; gap:8px;}
+  .row2 > *{flex:1;}
+
+  .toggle-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 0; border-bottom:1px solid #22260f; font-size:12px;
+  }
+  .toggle-row:last-child{border-bottom:none;}
+  .toggle-row .switch{
+    width:34px; height:18px; border:1px solid var(--panel-line); border-radius:9px; position:relative; cursor:pointer;
+    background:#0e1009;
+  }
+  .toggle-row .switch .dot{
+    position:absolute; top:1px; left:1px; width:14px; height:14px; border-radius:50%;
+    background:var(--ink-dim); transition:left 0.12s ease, background 0.12s ease;
+  }
+  .toggle-row .switch.on{border-color:var(--amber-dim);}
+  .toggle-row .switch.on .dot{left:16px; background:var(--amber);}
+
+  #stat-table{width:100%; border-collapse:collapse; font-size:11.5px;}
+  #stat-table td{padding:3px 0; border-bottom:1px solid #1e2210; vertical-align:top;}
+  #stat-table td.k{color:var(--ink-dim); width:44%;}
+  #stat-table td.v{color:var(--ink); text-align:right;}
+
+  #longname{font-size:11.5px; color:var(--ink-dim); line-height:1.5; margin-bottom:10px;}
+
+  #weights-table{width:100%; border-collapse:collapse; font-size:11px; margin-top:4px;}
+  #weights-table th{
+    color:var(--ink-dim); font-weight:normal; font-size:9.5px; letter-spacing:0.05em;
+    padding:3px 2px; border-bottom:1px solid var(--panel-line); text-align:center;
+  }
+  #weights-table td{padding:4px 2px; text-align:center; border-bottom:1px solid #1e2210;}
+  #weights-table tr.active td{color:var(--amber);}
+  #weights-table td.bar-cell{position:relative;}
+  .bar{height:4px; background:var(--amber-dim); margin-top:3px;}
+
+  .badge{
+    display:inline-block; font-size:10px; padding:2px 7px; border:1px solid var(--panel-line);
+    color:var(--ink-dim); margin:0 4px 4px 0; border-radius:2px;
+  }
+  .badge.on{border-color:var(--green); color:var(--green);}
+  .badge.grail{border-color:var(--amber-dim); color:var(--amber);}
+
+  #panel-footer{
+    border-top:1px solid var(--panel-line); padding:12px 18px; font-size:10px; color:var(--ink-dim); line-height:1.5;
+  }
+  #panel-footer b{color:var(--ink);}
+
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-track{background:var(--panel);}
+  ::-webkit-scrollbar-thumb{background:var(--panel-line);}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="viewport">
+    <canvas id="scene"></canvas>
+    <div id="hud-corners">
+      <span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span>
+    </div>
+    <div id="model-tag"><div class="kind" id="model-kind">—</div><div class="name" id="model-name">—</div></div>
+    <div id="footer-readout" id="footer-readout">drag to orbit · scroll to zoom</div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div id="panel">
+    <div id="panel-header">
+      <div class="title">UNIT MODEL VIEWER</div>
+      <div class="sub">unit-builders.js — turntable inspector</div>
+    </div>
+    <div id="panel-scroll">
+
+      <div class="group">
+        <div class="group-label">CATEGORY</div>
+        <select id="sel-category"></select>
+      </div>
+
+      <div class="group">
+        <div class="group-label">VARIANT</div>
+        <select id="sel-variant"></select>
+        <div class="row2">
+          <button id="btn-prev">◂ prev</button>
+          <button id="btn-next">next ▸</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-label">THEATER (spawn weighting)</div>
+        <select id="sel-theater">
+          <option value="0">0 — Southeast Asia</option>
+          <option value="1">1 — Central America</option>
+          <option value="2">2 — Persian Gulf</option>
+          <option value="3">3 — Western Europe</option>
+        </select>
+        <button id="btn-random" class="primary">🎲 random for this theater</button>
+      </div>
+
+      <div class="group">
+        <div class="toggle-row" id="toggle-wireframe"><span>wireframe</span><span class="switch"><span class="dot"></span></span></div>
+        <div class="toggle-row" id="toggle-rotate"><span>auto-rotate</span><span class="switch"><span class="dot"></span></span></div>
+        <div class="toggle-row" id="toggle-grid"><span>ground grid</span><span class="switch"><span class="dot"></span></span></div>
+        <div class="toggle-row" id="toggle-shadow-invisible" style="display:none;"><span>invisible (in-game mode)</span><span class="switch"><span class="dot"></span></span></div>
+        <button id="btn-reset-view">reset camera</button>
+      </div>
+
+      <div class="group">
+        <div class="group-label">DESCRIPTION</div>
+        <div id="longname">—</div>
+        <div id="badges"></div>
+      </div>
+
+      <div class="group">
+        <div class="group-label">STATS</div>
+        <table id="stat-table"></table>
+      </div>
+
+      <div class="group" id="group-weights">
+        <div class="group-label">SPAWN WEIGHT BY THEATER</div>
+        <table id="weights-table">
+          <thead><tr><th>SEA</th><th>C.AM</th><th>GULF</th><th>W.EU</th></tr></thead>
+          <tbody><tr id="weights-row"></tr></tbody>
+        </table>
+      </div>
+
+    </div>
+    <div id="panel-footer">
+      Reads <b>UNIT_CLASSES</b> from <b>unit-classes.js</b> and calls the real <b>make*()</b> builders in <b>unit-builders.js</b> unmodified — keep all three files in the same folder. The Player Shadow Rig entry is a hand-copy of gunship.html's own <b>buildPlayerShadowRig()</b>, since that one lives outside unit-builders.js.
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="unit-classes.js"></script>
+<script src="unit-builders.js"></script>
+<script>
+/* ============================================================
+   Minimal stand-ins for the gunship.html globals that
+   unit-builders.js expects to already exist in the real game.
+   Flat terrain (height 0 everywhere) is all a model viewer needs —
+   these three names are the full extent of what the builders touch
+   outside UNIT_CLASSES/THREE itself.
+   ============================================================ */
+function terrainHeight(x, z){ return 0; }
+let mission = { theaterIdx: 0 };
+
+// Same contract as gunship.html's pickUnitClass(type, variantName, theaterIdx),
+// with one addition: variantName may be a numeric index, so the viewer can
+// select an exact entry even when two variants share a display name
+// (e.g. the two 'Heavy MG Team' infantry entries).
+function pickUnitClass(type, variantName, theaterIdx){
+  const list = UNIT_CLASSES[type];
+  if(!list || !list.length) return null;
+  if(typeof variantName === 'number') return list[variantName] || list[0];
+  if(variantName) return list.find(v => v.name === variantName) || list[0];
+  const ti = (typeof theaterIdx === 'number') ? theaterIdx : (mission.theaterIdx || 0);
+  const weights = list.map(v => (v.weights && typeof v.weights[ti] === 'number') ? v.weights[ti] : 1);
+  const total = weights.reduce((a,b)=>a+b, 0);
+  if(total <= 0) return list[Math.floor(Math.random()*list.length)];
+  let r = Math.random()*total;
+  for(let i=0;i<list.length;i++){ r -= weights[i]; if(r<0) return list[i]; }
+  return list[list.length-1];
+}
+
+/* ============================================================
+   Player shadow rig — this one isn't in unit-builders.js at all; it's
+   gunship.html's own buildPlayerShadowRig(), which exists purely so the
+   player's cockpit-view aircraft (which has no visible mesh of its own)
+   still casts a shadow. In-game its material has colorWrite:false so it
+   never actually renders — only its shadow does. Copied here by hand
+   (not loaded from gunship.html, which isn't a module) — if that
+   function's geometry ever changes, update this copy to match.
+   `solid` lets the viewer show the real invisible-in-game material
+   instead, so you can see the shadow-only behaviour exactly as it
+   appears in the cockpit.
+   ============================================================ */
+function buildPlayerShadowRigForViewer(solid){
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({color:0x223344, colorWrite:!!solid, depthWrite:!!solid});
+  const body = new THREE.Mesh(new THREE.BoxGeometry(6,5.5,36), mat);
+  body.castShadow = true; g.add(body);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(1.6,2.6,34), mat);
+  tail.position.set(0,-1.0,31); tail.rotation.x = -0.05; tail.castShadow = true; g.add(tail);
+  const vstab = new THREE.Mesh(new THREE.BoxGeometry(1.4,8,3.4), mat);
+  vstab.position.set(0,3.5,47.5); vstab.rotation.x = 0.4; vstab.castShadow = true; g.add(vstab);
+  const stub = new THREE.Mesh(new THREE.BoxGeometry(24,1.0,3.4), mat);
+  stub.position.set(0,-0.3,0); stub.castShadow = true; g.add(stub);
+  const rotor = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.75,65), mat);
+  rotor.position.y = 4.5; rotor.castShadow = true; g.add(rotor);
+  // Hover it above the ground plane, same idea as a helicopter on short
+  // finals — otherwise it'd sit clipped half into the grid at y=0 and
+  // there'd be no visible gap for the shadow to fall across.
+  g.position.y = 10;
+  return g;
+}
+let shadowRigInvisible = false; // toggled by the "invisible (in-game mode)" switch, shown only for this category
+
+/* ============================================================
+   Category manifest — one entry per make*() entry point, pointing
+   at the UNIT_CLASSES list it draws variants from. A couple of entries
+   (currently just the player shadow rig) aren't real spawnable
+   UNIT_CLASSES types at all — those carry their own `variants` array
+   directly and are marked `special` so the stats/badges/weights panels
+   (which assume a combat-unit shape) get out of the way for them.
+   ============================================================ */
+const CATEGORIES = [
+  {label:'Tank / IFV — Enemy',     classKey:'tank',            build:i=>makeTank(i,'tank')},
+  {label:'Tank / IFV — Friendly',  classKey:'friendlytank',     build:i=>makeTank(i,'friendlytank')},
+  {label:'SAM',                    classKey:'sam',              build:i=>makeSAM(i)},
+  {label:'AAA',                    classKey:'aaa',              build:i=>makeAAA(i)},
+  {label:'Helicopter',             classKey:'heli',             build:i=>makeEnemyHeli(i)},
+  {label:'Infantry — Enemy',       classKey:'infantry',         build:i=>makeInfantry(i,'infantry')},
+  {label:'Infantry — Friendly',    classKey:'friendlyinfantry', build:i=>makeInfantry(i,'friendlyinfantry')},
+  {label:'Bunker — Enemy',         classKey:'bunker',           build:i=>makeBunker(i,'bunker')},
+  {label:'Bunker — Friendly',      classKey:'friendlybunker',   build:i=>makeBunker(i,'friendlybunker')},
+  {label:'Artillery',              classKey:'artillery',        build:i=>makeArtillery(i)},
+  {label:'Civilian Home',          classKey:'civilian',         build:i=>makeCivilianHome(i)},
+  {label:'Helibase — Enemy',       classKey:'helibase',         build:i=>makeEnemyHelibase(i)},
+  {label:'HQ',                     classKey:'hq',               build:i=>makeEnemyHQ(i)},
+  {label:'Depot',                  classKey:'depot',            build:i=>makeEnemyDepot(i)},
+  {label:'Player Shadow Rig', special:true, variants:[{
+      name:'AH-64 Shadow Rig',
+      longname:'Invisible rig from gunship.html that mirrors the player aircraft every frame so it has something to cast a shadow, since the cockpit view itself has no visible mesh. In-game its material has colorWrite:false — it never renders, only its shadow does. Toggle "invisible (in-game mode)" below to see that for real.',
+    }], build:()=>buildPlayerShadowRigForViewer(!shadowRigInvisible)},
+];
+
+function labelsFor(list){
+  const counts = {};
+  list.forEach(v => counts[v.name] = (counts[v.name]||0) + 1);
+  const seen = {};
+  return list.map(v => {
+    if(counts[v.name] > 1){
+      seen[v.name] = (seen[v.name]||0) + 1;
+      return `${v.name} (#${seen[v.name]})`;
+    }
+    return v.name;
+  });
+}
+
+/* ============================================================
+   Three.js scene setup
+   ============================================================ */
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d0f0a);
+scene.fog = new THREE.Fog(0x0d0f0a, 200, 900);
+
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 5000);
+
+const hemi = new THREE.HemisphereLight(0xdfe8c8, 0x1a1a12, 0.75);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff2d0, 1.15);
+sun.position.set(60, 90, 40);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left = -150; sun.shadow.camera.right = 150;
+sun.shadow.camera.top = 150; sun.shadow.camera.bottom = -150;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 500;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x6a7aa0, 0.35);
+fill.position.set(-50,40,-60);
+scene.add(fill);
+
+const groundMat = new THREE.MeshStandardMaterial({color:0x232a17, roughness:1});
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000,2000), groundMat);
+ground.rotation.x = -Math.PI/2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const grid = new THREE.GridHelper(400, 80, 0x4a5230, 0x2a3018);
+grid.position.y = 0.01;
+scene.add(grid);
+
+let currentGroup = null;
+
+/* ---- lightweight orbit camera (no external addon needed) ---- */
+const orbit = {target:new THREE.Vector3(0,0,0), radius:30, theta:0.9, phi:1.1, dragging:false, lastX:0, lastY:0};
+function applyOrbit(){
+  const p = orbit.phi = Math.max(0.15, Math.min(Math.PI-0.1, orbit.phi));
+  camera.position.set(
+    orbit.target.x + orbit.radius*Math.sin(p)*Math.sin(orbit.theta),
+    orbit.target.y + orbit.radius*Math.cos(p),
+    orbit.target.z + orbit.radius*Math.sin(p)*Math.cos(orbit.theta)
+  );
+  camera.lookAt(orbit.target);
+}
+canvas.addEventListener('pointerdown', e=>{
+  orbit.dragging = true; orbit.lastX = e.clientX; orbit.lastY = e.clientY;
+  canvas.classList.add('dragging'); canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointerup', e=>{ orbit.dragging=false; canvas.classList.remove('dragging'); });
+canvas.addEventListener('pointermove', e=>{
+  if(!orbit.dragging) return;
+  const dx = e.clientX - orbit.lastX, dy = e.clientY - orbit.lastY;
+  orbit.lastX = e.clientX; orbit.lastY = e.clientY;
+  orbit.theta -= dx*0.008;
+  orbit.phi -= dy*0.008;
+  applyOrbit();
+});
+canvas.addEventListener('wheel', e=>{
+  e.preventDefault();
+  orbit.radius *= (1 + e.deltaY*0.001);
+  orbit.radius = Math.max(orbit.minRadius||1, Math.min(orbit.maxRadius||3000, orbit.radius));
+  applyOrbit();
+}, {passive:false});
+
+function resize(){
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+
+function frameCurrentModel(){
+  if(!currentGroup) return;
+  const box = new THREE.Box3().setFromObject(currentGroup);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const center = new THREE.Vector3(); box.getCenter(center);
+  const radius = Math.max(size.length()*0.6, 3);
+  orbit.target.copy(center);
+  orbit.radius = radius * 1.9;
+  orbit.minRadius = radius*0.15;
+  orbit.maxRadius = radius*12;
+  orbit.theta = 0.9; orbit.phi = 1.1;
+  grid.scale.setScalar(Math.max(1, radius/18));
+  applyOrbit();
+}
+document.getElementById('btn-reset-view').addEventListener('click', frameCurrentModel);
+
+/* ============================================================
+   Build / rebuild the selected model
+   ============================================================ */
+const selCategory = document.getElementById('sel-category');
+const selVariant = document.getElementById('sel-variant');
+const selTheater = document.getElementById('sel-theater');
+const errorBanner = document.getElementById('error-banner');
+
+CATEGORIES.forEach((c,i)=>{
+  const opt = document.createElement('option');
+  opt.value = i; opt.textContent = c.label;
+  selCategory.appendChild(opt);
+});
+
+function currentCategory(){ return CATEGORIES[+selCategory.value]; }
+function variantListFor(cat){ return cat.variants || UNIT_CLASSES[cat.classKey] || []; }
+function currentVariantList(){ return variantListFor(currentCategory()); }
+
+// Like pickUnitClass, but also works for a category's own local `variants`
+// array (player shadow rig etc.) instead of only real UNIT_CLASSES lists.
+function resolveVariant(cat, variantSel, theaterIdx){
+  const list = variantListFor(cat);
+  if(!list.length) return null;
+  if(typeof variantSel === 'number') return list[variantSel] || list[0];
+  if(variantSel) return list.find(v => v.name === variantSel) || list[0];
+  const ti = (typeof theaterIdx === 'number') ? theaterIdx : 0;
+  const weights = list.map(v => (v.weights && typeof v.weights[ti] === 'number') ? v.weights[ti] : 1);
+  const total = weights.reduce((a,b)=>a+b, 0);
+  if(total <= 0) return list[Math.floor(Math.random()*list.length)];
+  let r = Math.random()*total;
+  for(let i=0;i<list.length;i++){ r -= weights[i]; if(r<0) return list[i]; }
+  return list[list.length-1];
+}
+
+function populateVariants(){
+  selVariant.innerHTML = '';
+  const list = currentVariantList();
+  const labels = labelsFor(list);
+  list.forEach((v,i)=>{
+    const opt = document.createElement('option');
+    opt.value = i; opt.textContent = labels[i];
+    selVariant.appendChild(opt);
+  });
+}
+
+function setBadge(container, text, cls){
+  const s = document.createElement('span');
+  s.className = 'badge' + (cls?(' '+cls):'');
+  s.textContent = text;
+  container.appendChild(s);
+}
+
+function renderStats(v, cat){
+  const table = document.getElementById('stat-table');
+  table.innerHTML = '';
+  const rows = [
+    ['HP', v.hp],
+    ['Range', v.range],
+    ['Damage', v.dmg],
+    ['Fire interval (s)', v.interval],
+    ['Projectile speed', v.projSpeed],
+    ['Missile speed', v.missileSpeed],
+    ['Turn rate', v.turnRate],
+    ['Barrels', v.barrels],
+    ['Fly speed', v.flySpeed],
+    ['Standoff', v.standoff],
+    ['Fire interval min (s)', v.fireIntervalMin],
+    ['Fire interval rand (s)', v.fireIntervalRand],
+    ['Radar', v.radar],
+    ['IR', v.IR],
+  ].filter(([,val]) => val !== undefined);
+  rows.forEach(([k,val])=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="k">${k}</td><td class="v">${val}</td>`;
+    table.appendChild(tr);
+  });
+
+  document.getElementById('longname').textContent = v.longname || '(no longname field)';
+
+  const badges = document.getElementById('badges');
+  badges.innerHTML = '';
+  const special = cat && cat.special;
+  badges.style.display = special ? 'none' : '';
+  if(!special){
+    setBadge(badges, v.armored ? 'armored' : 'unarmored', v.armored?'on':null);
+    setBadge(badges, v.friendly ? 'friendly' : 'enemy', v.friendly?'on':null);
+    if(v.grail) setBadge(badges, `grail ${v.grail}`, 'grail');
+    if(v.radar) setBadge(badges, `radar ${v.radar}`, 'grail');
+  }
+
+  document.getElementById('group-weights').style.display = special ? 'none' : '';
+  if(!special){
+    const wRow = document.getElementById('weights-row');
+    wRow.innerHTML = '';
+    const theaterIdx = +selTheater.value;
+    for(let t=0;t<4;t++){
+      const w = (v.weights && typeof v.weights[t]==='number') ? v.weights[t] : 1;
+      const td = document.createElement('td');
+      td.className = 'bar-cell';
+      td.innerHTML = `${w.toFixed(2)}<div class="bar" style="width:${Math.min(100,w*80)}%; margin-left:auto; margin-right:auto;"></div>`;
+      wRow.appendChild(td);
+    }
+    wRow.className = '';
+  }
+}
+
+let wireframeOn = false, rotateOn = false, gridOn = true;
+
+function buildSelected(){
+  errorBanner.style.display = 'none';
+  const cat = currentCategory();
+  const idx = +selVariant.value;
+  const v = resolveVariant(cat, idx);
+  if(!v) return;
+
+  document.getElementById('toggle-shadow-invisible').style.display = cat.special ? 'flex' : 'none';
+
+  if(currentGroup){
+    scene.remove(currentGroup);
+    currentGroup.traverse(o=>{
+      if(o.geometry) o.geometry.dispose();
+      if(o.material){
+        (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose());
+      }
+    });
+  }
+
+  try{
+    const group = cat.build(idx);
+    group.traverse(o=>{ if(o.isMesh){ o.material.wireframe = wireframeOn; } });
+    scene.add(group);
+    currentGroup = group;
+    frameCurrentModel();
+  }catch(err){
+    currentGroup = null;
+    errorBanner.style.display = 'block';
+    errorBanner.textContent = `Builder threw an error for ${cat.label} → ${v.name}:\n\n${err.message}\n\n${err.stack||''}`;
+    console.error(err);
+  }
+
+  document.getElementById('model-kind').textContent = cat.label;
+  document.getElementById('model-name').textContent = v.name || '—';
+  renderStats(v, cat);
+}
+
+selCategory.addEventListener('change', ()=>{ populateVariants(); buildSelected(); });
+selVariant.addEventListener('change', buildSelected);
+selTheater.addEventListener('change', ()=>{ mission.theaterIdx = +selTheater.value; renderStats(resolveVariant(currentCategory(), +selVariant.value), currentCategory()); });
+
+document.getElementById('btn-prev').addEventListener('click', ()=>{
+  const n = selVariant.options.length;
+  selVariant.selectedIndex = (selVariant.selectedIndex - 1 + n) % n;
+  buildSelected();
+});
+document.getElementById('btn-next').addEventListener('click', ()=>{
+  const n = selVariant.options.length;
+  selVariant.selectedIndex = (selVariant.selectedIndex + 1) % n;
+  buildSelected();
+});
+document.getElementById('btn-random').addEventListener('click', ()=>{
+  mission.theaterIdx = +selTheater.value;
+  const cat = currentCategory();
+  const v = resolveVariant(cat, null, +selTheater.value);
+  const list = currentVariantList();
+  const idx = list.indexOf(v);
+  selVariant.selectedIndex = Math.max(0, idx);
+  buildSelected();
+});
+
+function wireToggle(id, getVal, setVal){
+  const row = document.getElementById(id);
+  const sw = row.querySelector('.switch');
+  function paint(){ sw.classList.toggle('on', getVal()); }
+  row.addEventListener('click', ()=>{ setVal(!getVal()); paint(); });
+  paint();
+  return paint;
+}
+wireToggle('toggle-wireframe', ()=>wireframeOn, v=>{
+  wireframeOn = v;
+  if(currentGroup) currentGroup.traverse(o=>{ if(o.isMesh) o.material.wireframe = v; });
+});
+wireToggle('toggle-rotate', ()=>rotateOn, v=>{ rotateOn = v; });
+wireToggle('toggle-grid', ()=>gridOn, v=>{ gridOn = v; grid.visible = v; ground.visible = v; });
+wireToggle('toggle-shadow-invisible', ()=>shadowRigInvisible, v=>{ shadowRigInvisible = v; buildSelected(); });
+
+/* ============================================================
+   Boot + render loop
+   ============================================================ */
+populateVariants();
+resize();
+buildSelected();
+
+function tick(){
+  requestAnimationFrame(tick);
+  if(rotateOn && currentGroup) currentGroup.rotation.y += 0.006;
+  renderer.render(scene, camera);
+}
+tick();
+</script>
+</body>
+</html>

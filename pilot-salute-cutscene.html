@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="./medals-data.js"></script>
+<meta charset="UTF-8">
+<title>GUNSHIP REDUX — Salute Cutscene Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --panel-line:#1c2a20;
+    --phosphor:#5ee87a;
+    --phosphor-dim:#2c6b3f;
+    --red:#ff4d4f;
+    --steel:#7c8f84;
+  }
+  html,body{width:100%;height:100%;margin:0;background:#000;overflow:hidden;font-family:'Share Tech Mono',monospace;}
+  #scene{position:absolute;inset:0;display:block;}
+
+  /* cinematic letterbox bars, same device the game could use for cutscenes */
+  .bar{position:absolute;left:0;right:0;height:9vh;background:#000;z-index:6;pointer-events:none;}
+  #bar-top{top:0;}
+  #bar-bottom{bottom:0;}
+
+  #caption{
+    position:absolute; left:0; right:0; bottom:12vh; text-align:center; z-index:7;
+    font-family:'Orbitron',sans-serif; letter-spacing:3px; font-size:15px; color:var(--phosphor);
+    text-shadow:0 0 8px rgba(94,232,122,.5);
+    opacity:0; transition:opacity 1.1s ease;
+  }
+  #caption .sub{display:block;margin-top:6px;font-family:'Share Tech Mono',monospace;letter-spacing:2px;font-size:11px;color:var(--steel);}
+  #caption.show{opacity:1;}
+
+  #hint{
+    position:absolute; top:calc(9vh + 14px); left:16px; z-index:7;
+    font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:1px; color:var(--steel);
+    border:1px solid var(--panel-line); background:rgba(6,10,8,.55); padding:8px 12px; max-width:280px;
+  }
+  #hint b{color:var(--phosphor);}
+
+  #replay{
+    position:absolute; top:calc(9vh + 14px); right:16px; z-index:7;
+    font-family:'Orbitron',sans-serif; letter-spacing:2px; font-size:12px;
+    background:transparent; border:1px solid var(--phosphor-dim); color:var(--phosphor);
+    padding:9px 16px; cursor:pointer; opacity:0; pointer-events:none; transition:opacity .4s ease;
+  }
+  #replay.show{opacity:1;pointer-events:auto;}
+  #replay:hover{background:rgba(94,232,122,.12);}
+</style>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+<div class="bar" id="bar-top"></div>
+<div class="bar" id="bar-bottom"></div>
+<div id="caption">HONORS RENDERED<span class="sub">SALUTE CUTSCENE — PREVIEW BUILD</span></div>
+<div id="hint">Drop-in rig for <b>gunship.html</b>. See the two commented sections in this file's &lt;script&gt; — <b>buildSalutingPilot()</b> and <b>createSaluteSequence()</b> — copy them in as-is and call from your ceremony/debrief screen.</div>
+<button id="replay">▶ REPLAY</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =====================================================================
+   PILOT RIG + SALUTE ANIMATION
+   Written to match gunship.html's existing conventions so it can be
+   pasted straight in:
+     - Three.js r128, no ES modules (file:// safe, same reason as the
+       medals-data.js / storageWrite fallback in gunship.html)
+     - low-poly primitives (Cylinder/Box/Sphere), flatShading:true,
+       MeshStandardMaterial — same look as buildPlayerShadowRig(),
+       the hangar, the trees, etc.
+     - segment counts kept low (5-8) same as the tree trunks / rotor
+       masts elsewhere in gunship.html
+
+   INTEGRATION INTO gunship.html:
+     1. Copy buildSalutingPilot() and createSaluteSequence() verbatim
+        into gunship.html (anywhere near buildPlayerShadowRig() is a
+        natural home).
+     2. When you want the cutscene: 
+          const pilotRig = buildSalutingPilot();
+          pilotRig.position.copy(wherever);
+          scene.add(pilotRig);
+          const seq = createSaluteSequence(pilotRig);
+     3. In your existing render loop, while the cutscene is active:
+          const done = seq.update(dt).done;
+          if (done) { /* cutscene over, proceed to debrief etc.*/ /*}
+     4. Remove pilotRig from the scene (and stop calling seq.update)
+        once you're done with it.
+   ===================================================================== */
+
+// ---- palette (kept separate so re-skinning rank/branch later is easy) ----
+const PILOT_COLORS = {
+  flightsuit : 0x4a5230, // olive drab
+  flightsuitShade: 0x3a4026,
+  glove      : 0x23261e,
+  boot       : 0x1c1c1c,
+  skin       : 0xd8a878,
+  helmet     : 0x33372c,
+  visor      : 0x11151b,
+  earcup     : 0x1a1a1a,
+  strap      : 0x14140f,
+};
+
+// Builds one limb segment: a tapered cylinder whose TOP is the pivot
+// (so rotating `group` swings the whole segment about that joint), plus
+// a child `anchor` Group at the segment's far end to hang the next
+// segment (or a hand/foot) from. Mirrors the parent/child joint-chain
+// approach already used for the rotor/tail rig in buildPlayerShadowRig().
+function makeLimbSegment(radiusTop, radiusBottom, length, color, segs=6){
+  const group = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({color, flatShading:true, roughness:0.85});
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radiusTop, radiusBottom, length, segs), mat);
+  mesh.position.y = -length/2;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+  const anchor = new THREE.Group();
+  anchor.position.y = -length;
+  group.add(anchor);
+  return {group, anchor, mesh};
+}
+
+// Builds a low-poly hand: palm box + 4 fingers + an angled-out thumb, all
+// hanging from local y=0 (the wrist) downward. Kept as its own function
+// since both arms need one and it's the fiddliest part of the rig to get
+// proportions right on.
+function buildHand(color, side=1){
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({color, flatShading:true, roughness:0.85});
+
+  const palmW = 0.085, palmH = 0.07, palmD = 0.05;
+  const palm = new THREE.Mesh(new THREE.BoxGeometry(palmW, palmH, palmD), mat);
+  palm.position.y = -palmH/2;
+  palm.castShadow = true;
+  palm.receiveShadow = true;
+  g.add(palm);
+
+  // fingers: 4 thin boxes fanned evenly across the palm's lower edge
+  const fingerLen = [0.076, 0.088, 0.078, 0.067];
+  const fingerW = 0.016, fingerGap = 0.021;
+  for (let i=0; i<4; i++){
+    const finger = new THREE.Mesh(new THREE.BoxGeometry(fingerW, fingerLen[i], fingerW*0.85), mat);
+    finger.position.set(-side*(i-1.5)*fingerGap, -palmH - fingerLen[i]/2, 0);
+    finger.castShadow = true;
+    g.add(finger);
+  }
+
+  // thumb: shorter, angled out from the palm's edge rather than hanging
+  // straight down like the fingers
+  const thumbLen = 0.055;
+  const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.02, thumbLen, 0.018), mat);
+  thumb.position.set(palmW*0.52*side, -palmH*0.22, palmD*0.2);
+  thumb.rotation.z = 0.85*side;
+  thumb.castShadow = true;
+  g.add(thumb);
+
+  return g;
+}
+
+function buildSalutingPilot(newAward=null;){
+  const rig = new THREE.Group();
+  rig.name = 'salutingPilot';
+  const parts = {}; // joints we'll want to animate, stashed on rig.userData
+
+  // ---- hips: root of the upper body, and the pivot both legs hang from ----
+  const hips = new THREE.Group();
+  hips.position.y = 0.95; // leg length, feet sit at rig-local y=0
+  rig.add(hips);
+  const medal = buildMedalMesh3D(newAward, null);
+  medal.position.set(0.1, 0.53, 0.165);     // centered, near the collar
+  hips.add(medal);
+
+  // ---- torso ----
+  const torsoMat = new THREE.MeshStandardMaterial({color:PILOT_COLORS.flightsuit, flatShading:true, roughness:0.85});
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.24, 0.62, 7), torsoMat);
+  torso.position.y = 0.33;
+  torso.castShadow = torso.receiveShadow = true;
+  hips.add(torso);
+  // belt line
+  const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.245, 0.245, 0.06, 7),
+    new THREE.MeshStandardMaterial({color:PILOT_COLORS.glove, flatShading:true}));
+  belt.position.y = 0.03;
+  hips.add(belt);
+
+  // ---- neck + head ----
+  const neck = new THREE.Group();
+  neck.position.y = 0.64;
+  hips.add(neck);
+  const neckMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.07,0.1,6),
+    new THREE.MeshStandardMaterial({color:PILOT_COLORS.skin, flatShading:true}));
+  neckMesh.position.y = 0.05;
+  neck.add(neckMesh);
+
+  const head = new THREE.Group();
+  head.position.y = 0.12;
+  neck.add(head);
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.115, 8, 6),
+    new THREE.MeshStandardMaterial({color:PILOT_COLORS.skin, flatShading:true}));
+  skull.scale.set(1, 1.05, 0.95);
+  head.add(skull);
+  // flight helmet dome (slightly larger than the skull, sits over the top/back)
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.135, 8, 6, 0, Math.PI*2, 0, Math.PI*0.62),
+    new THREE.MeshStandardMaterial({color:PILOT_COLORS.helmet, flatShading:true}));
+  dome.position.y = 0.02;
+  head.add(dome);
+  // visor, flipped up on the forehead (reads better than down over the face for a salute shot)
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.07, 0.05),
+    new THREE.MeshStandardMaterial({color:PILOT_COLORS.visor, flatShading:true}));
+  visor.position.set(0, 0.09, 0.1);
+  visor.rotation.x = -0.5;
+  head.add(visor);
+  // comms ear cups
+  [-1,1].forEach(side=>{
+    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.04,8),
+      new THREE.MeshStandardMaterial({color:PILOT_COLORS.earcup, flatShading:true}));
+    cup.rotation.z = Math.PI/2;
+    cup.position.set(0.135*side, 0.0, 0);
+    head.add(cup);
+  });
+  // chin strap
+  const strap = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.16, 0.02),
+    new THREE.MeshStandardMaterial({color:PILOT_COLORS.strap, flatShading:true}));
+  strap.position.set(0.11, -0.03, 0.03);
+  strap.rotation.z = 0.3;
+  head.add(strap);
+
+  // ---- shoulders / arms ----
+  // buildArm(side): side = -1 (left) or +1 (right). Returns the shoulder
+  // group (attach point on torso) plus the elbow/shoulder joints so the
+  // animation code can drive them directly.
+  function buildArm(side){
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0.235*side, 0.56, 0);
+    hips.add(shoulder);
+
+    const upper = makeLimbSegment(0.055, 0.05, 0.42, PILOT_COLORS.flightsuit, 6);
+    shoulder.add(upper.group);
+
+    // forearm shortened (was 0.38) to make room for the longer hand below
+    const lower = makeLimbSegment(0.048, 0.042, 0.30, PILOT_COLORS.flightsuitShade, 6);
+    upper.anchor.add(lower.group);
+
+    // hand: palm + fingers + thumb, mirrored per side so the thumb sits on
+    // the correct edge for a left vs right hand
+    const hand = buildHand(PILOT_COLORS.glove, side);
+    lower.anchor.add(hand);
+
+    // idle rest pose: arm hanging straight down at the side
+    shoulder.rotation.set(0, 0, 0);
+    lower.group.rotation.set(0, Math.PI, 0);
+
+    return {shoulder, elbow:lower.group, hand:lower.anchor, handGroup:hand};
+  }
+  const armL = buildArm(-1);
+  const armR = buildArm(1); // the saluting arm
+
+  // ---- legs (static — a saluting pilot doesn't need leg animation, but
+  // built for a complete standing figure / silhouette from any angle) ----
+  function buildLeg(side){
+    const hipJoint = new THREE.Group();
+    hipJoint.position.set(0.1*side, 0, 0);
+    hips.add(hipJoint);
+
+    const thigh = makeLimbSegment(0.07, 0.06, 0.5, PILOT_COLORS.flightsuit, 6);
+    hipJoint.add(thigh.group);
+
+    const shin = makeLimbSegment(0.06, 0.05, 0.45, PILOT_COLORS.flightsuit, 6);
+    thigh.anchor.add(shin.group);
+
+    const boot = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.22),
+      new THREE.MeshStandardMaterial({color:PILOT_COLORS.boot, flatShading:true}));
+    boot.position.set(0, -0.04, 0.05);
+    shin.anchor.add(boot);
+
+    return {hipJoint};
+  }
+  buildLeg(-1);
+  buildLeg(1);
+
+  // stash joints for the animation driver
+  rig.userData.joints = {
+    hips, neck, head,
+    shoulderR: armR.shoulder, elbowR: armR.elbow,
+    shoulderL: armL.shoulder, elbowL: armL.elbow,
+  };
+  return rig;
+}
+
+// ---- easing (same family of curve you'd want for any camera/rig tween) ----
+function easeInOutCubic(t){ return t<0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2; }
+function easeOutCubic(t){ return 1-Math.pow(1-t,3); }
+
+// Rest and salute poses for the right arm. Values are radians on the
+// shoulder/elbow joint Groups built above.
+const POSE_REST   = { shoulderX:0,     shoulderZ:0,     elbowX:0     };
+const POSE_SALUTE = { shoulderX:-1.32, shoulderZ:-0.30, elbowX:-2.15 };
+
+// Drives the salute timeline. Call .update(dt) once per frame from
+// whatever render loop the caller already has running; dt is seconds.
+// Returns {done:boolean, phase:string} each call.
+function createSaluteSequence(rig){
+  const j = rig.userData.joints;
+  const PHASES = [
+    {name:'idle-pre',  dur:0.8},
+    {name:'raise',     dur:0.9},
+    {name:'hold',      dur:4.6},
+    {name:'lower',     dur:0.9},
+    {name:'idle-post', dur:1.0},
+  ];
+  let t = 0;
+  let done = false;
+
+  function setArm(pose, k){
+    j.shoulderR.rotation.z = -pose.shoulderX * 1.6 * k;
+    j.shoulderR.rotation.x = pose.shoulderZ * k;
+    j.elbowR.rotation.z    = pose.elbowX * 1.13 * k
+  }
+
+  function update(dt){
+    if (done) return {done, phase:'idle-post'};
+    t += dt;
+
+    // idle breathing/sway runs throughout, independent of the salute phase
+    const breathe = Math.sin(t*1.6) * 0.012;
+    j.hips.position.y = 0.95 + breathe;
+    j.head.rotation.y = Math.sin(t*0.35) * 0.05;
+
+    let elapsed = t, phase = PHASES[0].name;
+    for (const p of PHASES){
+      if (elapsed <= p.dur){ phase = p.name;
+        switch(p.name){
+          case 'idle-pre':  setArm(POSE_SALUTE, 0); break;
+          case 'raise':     setArm(POSE_SALUTE, easeInOutCubic(elapsed/p.dur)); break;
+          case 'hold':       setArm(POSE_SALUTE, 1); break;
+          case 'lower':      setArm(POSE_SALUTE, 1 - easeOutCubic(elapsed/p.dur)); break;
+          case 'idle-post':  setArm(POSE_SALUTE, 0); break;
+        }
+        break;
+      }
+      elapsed -= p.dur;
+    }
+    if (t >= PHASES.reduce((s,p)=>s+p.dur,0)) done = true;
+    return {done, phase};
+  }
+
+  function reset(){ t = 0; done = false; setArm(POSE_SALUTE, 0); }
+
+  return {update, reset, get elapsed(){ return t; }};
+}
+
+
+/* =====================================================================
+   STANDALONE DEMO HARNESS — everything below is just this preview page
+   (scene, ground, lights, cinematic camera move, letterbox/caption/
+   replay UI). None of it needs to travel into gunship.html; the game
+   already has its own scene/renderer/lighting to hang the rig above on.
+   ===================================================================== */
+
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, logarithmicDepthBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b1410);
+scene.fog = new THREE.Fog(0x0b1410, 8, 22);
+
+const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.1, 100);
+
+// lighting: single low warm key light (low sun / hangar floodlight feel)
+// + cool ambient fill, same two-light minimalism as gunship.html's scene
+const key = new THREE.DirectionalLight(0xffd9a0, 1.6);
+key.position.set(3, 4.5, 2.5);
+key.castShadow = true;
+key.shadow.mapSize.set(1024,1024);
+key.shadow.camera.near = 0.5;
+key.shadow.camera.far = 15;
+scene.add(key);
+scene.add(new THREE.AmbientLight(0x3a4a55, 0.55));
+const rim = new THREE.DirectionalLight(0x4d6b8a, 0.5);
+rim.position.set(-3, 2, -3);
+scene.add(rim);
+
+// ground: plain tarmac slab, flat-shaded like everything else here
+const ground = new THREE.Mesh(
+  new THREE.CylinderGeometry(6, 6, 0.2, 24),
+  new THREE.MeshStandardMaterial({color:0x272d28, flatShading:true, roughness:1})
+);
+ground.position.y = -0.1;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const pilotRig = buildSalutingPilot();
+pilotRig.position.set(0,0,0);
+scene.add(pilotRig);
+
+const sequence = createSaluteSequence(pilotRig);
+
+// cinematic camera: slow push + gentle arc across the whole sequence,
+// independent of the arm-animation timeline above
+const CAM_TOTAL = 5.6;
+const camStart = new THREE.Vector3(1.1, 1.5, 2.3);
+const camEnd   = new THREE.Vector3(0.55, 1.82, 1.4);
+const lookTarget = new THREE.Vector3(0, 1.1, 0);
+let camT = 0;
+
+function updateCamera(dt){
+  camT = Math.min(camT + dt, CAM_TOTAL);
+  const k = easeInOutCubic(camT / CAM_TOTAL);
+  camera.position.lerpVectors(camStart, camEnd, k);
+  camera.position.x += Math.sin(camT*0.25) * 0.05;
+  camera.lookAt(lookTarget);
+}
+
+const captionEl = document.getElementById('caption');
+const replayBtn = document.getElementById('replay');
+let captionShown = false;
+
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w,h);
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+const clock = new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const {done, phase} = sequence.update(dt);
+  updateCamera(dt);
+
+  if ((phase==='hold' || phase==='lower') && !captionShown){
+    captionShown = true;
+    captionEl.classList.add('show');
+  }
+  if (done){
+    replayBtn.classList.add('show');
+  }
+  renderer.render(scene, camera);
+}
+
+animate();
+
+replayBtn.addEventListener('click', ()=>{
+  sequence.reset();
+  camT = 0;
+  captionShown = false;
+  captionEl.classList.remove('show');
+  replayBtn.classList.remove('show');
+});
+</script>
+</body>
+</html>
