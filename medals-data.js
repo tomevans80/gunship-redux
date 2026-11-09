@@ -553,9 +553,13 @@ function buildRibbonDrape3D(stripes, size, tapered, depth){
   const g = new THREE.Group();
 
   if(!tapered){
-    // matches pendantSVG's drape-shape rect: rw=size*0.66, rh=size*0.46,
-    // centered horizontally, top edge at ry=size*0.24 down from the top.
-    const rw=size*0.66, rh=size*0.46, ry=size*0.24;
+    // Ceremony/theater-ribbon proportions: 80% of the original
+    // pendantSVG-matched width (size*0.66), with height set to a 5:2
+    // width:height aspect ratio rather than mirroring pendantSVG's
+    // rh=size*0.46 — this 3D drape no longer matches the 2D pendant icon's
+    // rectangle 1:1, by request. Top edge stays at the same ry=size*0.24
+    // down from the top so it still hangs from the same point.
+    const rw=size*0.66*0.8, rh=rw*(2/5), ry=size*0.24;
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(rw, rh), fabricMat);
     mesh.position.set(0, -(ry+rh/2), depth);
     const edge = new THREE.Mesh(new THREE.PlaneGeometry(rw*1.05, rh*1.08), edgeMat);
@@ -598,16 +602,20 @@ function buildMedalMesh3D(type, theaterIdx, size){
   const stripes = ribbonStripesFor(type, theaterIdx);
   const depth = size*0.055;
 
+  if(icon.shape === 'drape'){
+    // Ribbon-only award (the theater ribbon): no hang bar/clasp above it —
+    // real ribbon-only service awards are worn as a flat bar with nothing
+    // pinned above, so the metal clasp used for full pendants below is
+    // skipped here.
+    group.add(buildRibbonDrape3D(stripes, size, false, depth*0.55));
+    return group;
+  }
+
   const hangBarMat = new THREE.MeshStandardMaterial({color:0x555555, flatShading:true, roughness:0.5, metalness:0.6});
   const hangBar = new THREE.Mesh(new THREE.BoxGeometry(size*0.14, size*0.045, depth*0.8), hangBarMat);
   hangBar.position.set(0, -(size*0.01+size*0.0225), depth*0.4);
   hangBar.castShadow = true;
   group.add(hangBar);
-
-  if(icon.shape === 'drape'){
-    group.add(buildRibbonDrape3D(stripes, size, false, depth*0.55));
-    return group;
-  }
 
   group.add(buildRibbonDrape3D(stripes, size, true, depth*0.55));
 

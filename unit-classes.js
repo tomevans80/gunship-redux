@@ -32,36 +32,36 @@ const UNIT_CLASSES = {
   // radar/IR parameters drive jamming and missile guidance — see the radar-
   // jammer and IR-jammer notes in updateEnemies/updateProjectiles.
   tank: [
-    {name:'T-72',   longname:'T-72 main battle tanks', hp:50, range:600,  interval:10.0, projSpeed:250, dmg:6, hullColor:0x4a4f3a, turretColor:0x3d4230, barrelColor:0x2c2f22, armored: true, weights:[0.02,0.12,0.50,0.6]},
-    {name:'T-74',   longname:'T-74 main battle tanks', hp:65, range:600,  interval:8.5,  projSpeed:250, dmg:6, hullColor:0x4a4f3a, turretColor:0x3d4230, barrelColor:0x2c2f22, armored: true, weights:[0.0,0.08,1.0,1.9]},
+    {name:'T-72',   longname:'T-72 main battle tanks', hp:50, range:600,  interval:10.0, projSpeed:250, dmg:6, hullColor:0x4a4f3a, turretColor:0x3d4230, barrelColor:0x2c2f22, armored: true, weights:[0.00,0.08,0.50,0.6]},
+    {name:'T-74',   longname:'T-74 main battle tanks', hp:65, range:600,  interval:8.5,  projSpeed:250, dmg:6, hullColor:0x4a4f3a, turretColor:0x3d4230, barrelColor:0x2c2f22, armored: true, weights:[0.0,0.0,1.0,1.9]},
     {name:'BMP-2',  longname:'BMP-2 armoured troop carriers',hp:30, range:950,  interval:5.4,  projSpeed:220, dmg:5, hullColor:0x54503a, turretColor:0x45412e, barrelColor:0x332f20, armored: true, grail:1, weights:[0.2,0.35,0.85,0.85]},
   ],
   sam: [
-    {name:'SA-13 Gopher', longname:'SA-13 Gopher surface-to-air missile launchers with radar search and guidance',   hp:35, range:5500, interval:12,  missileSpeed:330, dmg:38, turnRate:1.2, baseColor:0x4f5a52, tubeColor:0x282c28, dishColor:0x2e332f, armored: true, radar: 3, IR: 2, weights:[0.0,0.0,0.35,0.06]},
-    {name:'SA-11 Gadfly', longname:'SA-11 Gadfly surface-to-air missile launchers with radar search and guidance',   hp:35, range:5500, interval:12,  missileSpeed:330, dmg:36, turnRate:1.2, baseColor:0x4f5a52, tubeColor:0x282c28, dishColor:0x2e332f, armored: true, radar: 3, IR: 1, weights:[0.0,0.0,0.35,0.06]},
-    {name:'SA-8 Gecko', longname:'SA-8 Gecko surface-to-air missile launchers with radar search and guidance',   hp:28, range:5000, interval:14,  missileSpeed:250, dmg:34, turnRate:1.2, baseColor:0x4f5a52, tubeColor:0x282c28, dishColor:0x2e332f, armored: true, radar: 2, IR: 1, weights:[0.0,0.0,0.35,0.62]},
-    {name:'SA-6 Gainful', longname:'SA-6 Gainful surface-to-air missile launchers with radar search', hp:35, range:4200, interval:18, missileSpeed:250,  dmg:30, turnRate:1.1, baseColor:0x555f4a, tubeColor:0x2c2f22, dishColor:0x333a2c, armored: true, radar: 1, IR: 1, weights:[0.02,0.1,0.4,0.42]},
+    {name:'SA-13 Gopher', longname:'SA-13 Gopher surface-to-air missile launchers with radar search and guidance',   hp:35, range:5500, interval:12,  missileSpeed:330, dmg:45, turnRate:1.2, baseColor:0x4f5a52, tubeColor:0x282c28, dishColor:0x2e332f, armored: true, radar: 3, IR: 2, weights:[0.0,0.0,0.05,0.62]},
+    {name:'SA-11 Gadfly', longname:'SA-11 Gadfly surface-to-air missile launchers with radar search and guidance',   hp:35, range:5500, interval:12,  missileSpeed:330, dmg:45, turnRate:1.2, baseColor:0x4f5a52, tubeColor:0x282c28, dishColor:0x2e332f, armored: true, radar: 3, IR: 1, weights:[0.0,0.0,0.15,0.62]},
+    {name:'SA-8 Gecko', longname:'SA-8 Gecko surface-to-air missile launchers with radar search and guidance',   hp:28, range:5000, interval:14,  missileSpeed:250, dmg:45, turnRate:1.2, baseColor:0x4f5a52, tubeColor:0x282c28, dishColor:0x2e332f, armored: true, radar: 2, IR: 1, weights:[0.0,0.01,0.35,0.12]},
+    {name:'SA-6 Gainful', longname:'SA-6 Gainful surface-to-air missile launchers with radar search', hp:35, range:4200, interval:18, missileSpeed:250,  dmg:40, turnRate:1.1, baseColor:0x555f4a, tubeColor:0x2c2f22, dishColor:0x333a2c, armored: true, radar: 1, IR: 1, weights:[0.0,0.12,0.4,0.12]},
   ],
   aaa: [
-    {name:'ZSU-30', longname:'ZSU-30 anti-aircraft units with radar search and fire control', hp:22, range:5500, interval:4.8, projSpeed:900, projLife:14, dmg:12, barrels:4, baseColor:0x4a4f3a, turretColor:0x3d4230, barrelColor:0x222222, armored: true, radar: 2, weights:[0.0,0.03,0.2,0.38]},
-    {name:'ZSU-23',  longname:'ZSU-30 anti-aircraft units with radar fire control', hp:22, range:5500, interval:4.9, projSpeed:800, projLife:11,dmg:12, barrels:4, baseColor:0x4a4f3a, turretColor:0x3d4230, barrelColor:0x222222, armored: true, radar: 1, weights:[0.03,0.06,0.3,0.37]},
+    {name:'ZSU-30', longname:'ZSU-30 anti-aircraft units with radar search and fire control', hp:22, range:5500, interval:4.8, projSpeed:900, projLife:14, dmg:12, barrels:2, hullColor:0x4a4f3a, turretColor:0x3d4230, barrelColor:0x222222, armored: true, radar: 2, weights:[0.0,0.03,0.2,0.38]},
+    {name:'ZSU-23',  longname:'ZSU-30 anti-aircraft units with radar fire control', hp:22, range:5500, interval:4.9, projSpeed:800, projLife:11,dmg:12, barrels:2, hullColor:0x4a4f3a, turretColor:0x3d4230, barrelColor:0x222222, armored: true, radar: 1, weights:[0.0,0.06,0.3,0.37]},
     {name:'ZU-23-2', longname:'ZU-23-2 anti-aircraft units', hp:16, range:2200, interval:5.2, projSpeed:600, projLife:8,dmg:7,  barrels:2, baseColor:0x4f4a3a, turretColor:0x3f3a2c, barrelColor:0x1c1c1c, armored: false, radar: 0, weights:[0.15,0.18,0.14,0.05]},
-	{name:'ZU-23-2b', longname:'ZU-23-2 anti-aircraft units with radar fire control', hp:16, range:2200, interval:5.2, projSpeed:600, projLife:8, dmg:7,  barrels:2, baseColor:0x4f4a3a, turretColor:0x3f3a2c, barrelColor:0x1c1c1c, armored: false, radar: 1, weights:[0.09,0.12,0.15,0.10]},
-	{name:'S-60',    longname:'obsolete 57 mm S-60 anti-aircraft units', hp:12, range:2200, interval:5.2, projSpeed:500, projLife:7,dmg:6,  barrels:2, baseColor:0x4f4a3a, turretColor:0x3f3a2c, barrelColor:0x1c1c1c, armored: false, radar: 0, weights:[0.15,0.16,0.11,0.0]},
-	{name:'S-60b',    longname:'57 mm S-60 anti-aircraft units with radar search and fire control', hp:12, range:2200, interval:5.2, projSpeed:500, projLife:7 ,dmg:6,  barrels:2, baseColor:0x4f4a3a, turretColor:0x3f3a2c, barrelColor:0x1c1c1c, armored: false, radar: 1, weights:[0.03,0.06,0.11,0.0]},
+	{name:'ZU-23-2b', longname:'ZU-23-2 anti-aircraft units with radar fire control', hp:16, range:2200, interval:5.2, projSpeed:600, projLife:8, dmg:7,  barrels:2, baseColor:0x4f4a3a, turretColor:0x3f3a2c, barrelColor:0x1c1c1c, armored: false, radar: 1, weights:[0.03,0.12,0.15,0.10]},
+	{name:'S-60',    longname:'obsolete 57 mm S-60 anti-aircraft units', hp:12, range:2200, interval:5.2, projSpeed:500, projLife:7,dmg:6,  barrels:2, baseColor:0x4f4a3a, turretColor:0x3f3a2c, barrelColor:0x1c1c1c, armored: false, radar: 0, weights:[0.15,0.16,0.0,0.0]},
+	{name:'S-60b',    longname:'57 mm S-60 anti-aircraft units with radar search and fire control', hp:12, range:2200, interval:5.2, projSpeed:500, projLife:7 ,dmg:6,  barrels:2, baseColor:0x4f4a3a, turretColor:0x3f3a2c, barrelColor:0x1c1c1c, armored: false, radar: 1, weights:[0.03,0.16,0.1,0.0]},
   ],
   heli: [
-    {name:'Mi-24 Hind F', longname:'Mi-24 Hind model F helicopters',   hp:55, range:1800, dmg:11,armored:false, grail:1, fireIntervalMin:0.9, fireIntervalRand:1.2, flySpeed:32, standoff:400, cannonArc:80, bodyColor:0x505070, tailColor:0x3a3a1c, weights:[0.0,0.0,0.05,0.12]},
-    {name:'Mi-24 Hind D', longname:'Mi-24 Hind model D helicopters',  hp:45, range:1600, dmg:9, armored:false, fireIntervalMin:1.1, fireIntervalRand:1.3, flySpeed:32, standoff:400, cannonArc:15, bodyColor:0x202030, tailColor:0x4a1c1c, weights:[0.0,0.2,0.45,0.5]},
+    {name:'Mi-24 Hind F', longname:'Mi-24 Hind model F helicopters',   hp:55, range:1800, dmg:11,armored:false, grail:2, fireIntervalMin:0.9, fireIntervalRand:1.2, flySpeed:62, standoff:830, cannonArc:80, bodyColor:0x505070, tailColor:0x3a3a1c, weights:[0.0,0.0,0.05,0.12]},
+    {name:'Mi-24 Hind D', longname:'Mi-24 Hind model D helicopters',  hp:45, range:1600, dmg:9, armored:false, fireIntervalMin:1.1, fireIntervalRand:1.3, flySpeed:58, standoff:720, cannonArc:15, bodyColor:0x202030, tailColor:0x4a1c1c, weights:[0.0,0.2,0.45,0.5]},
   ],
   infantry: [
     {name:'Heavy MG Team', longname:'infantry units equipped with machine guns and SA-7 grail IR missiles', hp:20, range:1150, dmg:6, armored:false, fireIntervalMin:1.6, fireIntervalRand:1.0, bodyColor:0x3a4a2c, headColor:0x322418, grail:1, weights:[0.59,0.70,0.23,0.00]},
-	{name:'Heavy MG Team', longname:'infantry units equipped with machine guns and SA-14 grail IR missiles', hp:20, range:1150, dmg:6, armored:false, fireIntervalMin:1.6, fireIntervalRand:1.0, bodyColor:0x3a4a2c, headColor:0x322418, grail:2, weights:[0.0,0.00,0.05,0.30]},
+	{name:'Elite MG Team', longname:'infantry units equipped with machine guns and SA-14 grail IR missiles', hp:20, range:1150, dmg:6, armored:false, fireIntervalMin:1.6, fireIntervalRand:1.0, bodyColor:0x3a4a2c, headColor:0x322418, grail:2, weights:[0.0,0.0,0.05,0.30]},
 	{name:'Rifle Squad',   longname:'infantry units with rifles', hp:16, range:900,  dmg:4, armored:false, fireIntervalMin:1.0, fireIntervalRand:0.8, bodyColor:0x445a35, headColor:0x3a2a20,          weights:[0.91,1.2,0.42,0.20]},
   ],
   bunker: [
-    {name:'Reinforced Bunker', longname:'reinforced bunker emplacements with SA-7 grail IR missiles', hp:65, range:900, interval:2.0, projSpeed:250, dmg:6, armored: true, baseColor:0x6a5433, turretColor:0x3a3628, barrelColor:0x1e1c15, grail:1, weights:[0.3,0.5,0.1,0.05]},
-    {name:'Bunker'           , longname:'lightly armoured bunker emplacements', hp:45, range:900, interval:2.0, projSpeed:250, dmg:6, armored: true, baseColor:0x4a4433, turretColor:0x3a3628, barrelColor:0x1e1c15, grail:1, weights:[1.0,0.9,0.0,0.00]},
+    {name:'Reinforced Bunker', longname:'reinforced bunker emplacements with SA-7 grail IR missiles', hp:65, range:900, interval:2.0, projSpeed:250, dmg:6, armored: true, baseColor:0x6a5433, turretColor:0x3a3628, barrelColor:0x1e1c15, grail:1, weights:[0.2,0.5,0.15,0.05]},
+    {name:'Bunker'           , longname:'lightly armoured bunker emplacements', hp:45, range:900, interval:2.0, projSpeed:250, dmg:6, armored: true, baseColor:0x4a4433, turretColor:0x3a3628, barrelColor:0x1e1c15, grail:1, weights:[0.8,0.9,0.0,0.00]},
 
   ],
   helibase: [
@@ -81,7 +81,7 @@ const UNIT_CLASSES = {
   friendlytank: [
     {name:'M1 Abrams',     longname:'M1 Abrams main battle tanks', hp:50, armored: true, friendly:true, hullColor:0x2a4f1a, turretColor:0x3d4230, barrelColor:0x2c2f22, weights:[0.0,0.0,0.2,0.4]},
 	{name:'M2 Bradley',    longname:'M2 Bradley infantry vehicles', hp:30, armored: true, friendly:true, hullColor:0x2a4f1a, turretColor:0x3d4230, barrelColor:0x2c2f22, weights:[0.2,0.2,0.1,0.1]},
-	{name:'M247 Sgt York', longname:'M247 Sergeant York anti-aircraft units', hp:30, armored: true, friendly:true, hullColor:0x2a4f1a, turretColor:0x3d4230, barrelColor:0x2c2f22, weights:[5.1,0.1,0.0,0.0]},
+	{name:'M247 Sgt York', longname:'M247 Sergeant York anti-aircraft units', hp:30, armored: true, friendly:true, hullColor:0x2a4f1a, turretColor:0x3d4230, barrelColor:0x2c2f22, weights:[0.2,0.2,0.0,0.0]},
 	],
   // New (friendly ground scenery, see populateFriendlyTerritory): reuses the
   // makeBunker()/makeInfantry() meshes with allied stats/colors, exactly

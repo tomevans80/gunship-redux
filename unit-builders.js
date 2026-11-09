@@ -36,14 +36,14 @@ function buildMBTMesh(v){
   const barrelMat = new THREE.MeshStandardMaterial({color:v.barrelColor});
   const wheelMat = new THREE.MeshStandardMaterial({color:0x1c1c1c, flatShading:true});
 
-  const hull = new THREE.Mesh(new THREE.BoxGeometry(5,3,7), hullMat);
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(5,2.1,7), hullMat);
   hull.position.y=1.6; g.add(hull);
   hull.castShadow = true;
 
   // Angled glacis plate at the nose, standing in for the T-72 family's
   // steeply sloped front armor rather than a flat hull front face.
-  const glacis = new THREE.Mesh(new THREE.BoxGeometry(4.8,2.6,2), hullMat);
-  glacis.position.set(0,1.3,4.3); glacis.rotation.x = -0.5; g.add(glacis);
+  const glacis = new THREE.Mesh(new THREE.BoxGeometry(4.8,1.8,1.5), hullMat);
+  glacis.position.set(0,1.5,3.3); glacis.rotation.x = 0.8; g.add(glacis);
   glacis.castShadow = true;
 
   // Track guards: thin plates running the hull length just above the road
@@ -64,8 +64,8 @@ function buildMBTMesh(v){
     });
   }
 
-  const turret = new THREE.Mesh(new THREE.BoxGeometry(3,1,4), turretMat);
-  turret.position.y=3.6; turret.name='turret'; g.add(turret);
+  const turret = new THREE.Mesh(new THREE.CylinderGeometry(2,2.5,1), turretMat);
+  turret.position.y=3.1; turret.name='turret'; g.add(turret);
   turret.castShadow = true;
 
   // Mantlet: a slightly wider block where the barrel emerges, breaking up
@@ -81,8 +81,8 @@ function buildMBTMesh(v){
   const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,3.2,5), new THREE.MeshStandardMaterial({color:0x1a1a1a}));
   antenna.position.set(1.3,2.1,-1.6); antenna.rotation.z = 0.12; turret.add(antenna);
 
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,6,6), barrelMat);
-  barrel.rotation.x=Math.PI/2; barrel.position.set(0,0,4); turret.add(barrel);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,6,6), barrelMat);
+  barrel.rotation.x=Math.PI/2; barrel.position.set(0,0,5); turret.add(barrel);
   barrel.castShadow = true;
 
   // Rear-deck fuel drums.
@@ -119,12 +119,10 @@ function buildBMPMesh(v){
   hull.position.y=1.3; g.add(hull);
   hull.castShadow = true;
 
-  const bow = new THREE.Mesh(new THREE.BoxGeometry(4.2,2,1.6), hullMat);
-  bow.position.set(0,1.1,4); bow.rotation.x = -0.7; g.add(bow);
+  const bow = new THREE.Mesh(new THREE.BoxGeometry(4.4,1.7,1.3), hullMat);
+  bow.position.set(0,1.3,3.5); bow.rotation.x = -0.6; g.add(bow);
   bow.castShadow = true;
 
-  const trimVane = new THREE.Mesh(new THREE.BoxGeometry(3.6,0.1,1), hullMat);
-  trimVane.position.set(0,0.5,4.9); trimVane.rotation.x = -0.55; g.add(trimVane);
 
   for(let i=0;i<6;i++){
     const z = -2.8+i*1.05;
@@ -136,11 +134,11 @@ function buildBMPMesh(v){
   }
 
   const turret = new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.3,0.9,8), turretMat);
-  turret.position.set(0,2.6,1); turret.name='turret'; g.add(turret);
+  turret.position.set(0,2.6,-1); turret.name='turret'; g.add(turret);
   turret.castShadow = true;
 
   const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,4.6,6), barrelMat);
-  barrel.rotation.x=Math.PI/2; barrel.position.set(0,0,2.6); turret.add(barrel);
+  barrel.rotation.x=1.35; barrel.position.set(0,0.6,2.6); turret.add(barrel);
   barrel.castShadow = true;
 
   const hatch = new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.4,0.2,8), hullMat);
@@ -170,8 +168,8 @@ function buildSgtYorkMesh(v){
   hull.position.y=1.6; g.add(hull);
   hull.castShadow = true;
 
-  const glacis = new THREE.Mesh(new THREE.BoxGeometry(4.8,2.6,2), hullMat);
-  glacis.position.set(0,1.3,4.3); glacis.rotation.x = -0.5; g.add(glacis);
+  const glacis = new THREE.Mesh(new THREE.BoxGeometry(5,2.4,2), hullMat);
+  glacis.position.set(0,1.55,3.5); glacis.rotation.x = -0.72; g.add(glacis);
   glacis.castShadow = true;
 
   [-2.6,2.6].forEach(x=>{
@@ -192,19 +190,19 @@ function buildSgtYorkMesh(v){
   // Turret: wider and flatter than a standard MBT turret — the real
   // system's turret had to be roomy enough for the gun cradle plus the
   // radar/fire-control electronics behind it.
-  const turret = new THREE.Mesh(new THREE.BoxGeometry(3.8,1.6,4.4), turretMat);
+  const turret = new THREE.Mesh(new THREE.BoxGeometry(3.8,2.1,4.4), turretMat);
   turret.position.y=3.7; turret.name='turret'; g.add(turret);
   turret.castShadow = true;
 
   const mantlet = new THREE.Mesh(new THREE.BoxGeometry(2.6,1.2,1), turretMat);
-  mantlet.position.set(0.5,0,2.1); turret.add(mantlet);
+  mantlet.position.set(0.0,0,2.1); turret.add(mantlet);
   mantlet.castShadow = true;
 
   // Twin 40mm cannons, side by side and elevated for the anti-air role —
   // the reference photo's most obvious feature.
   [-0.55,0.55].forEach(x=>{
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,5.6,6), barrelMat);
-    barrel.rotation.x = Math.PI/2.5; barrel.position.set(x+0.5,0.55,3); turret.add(barrel);
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,5.8,6), barrelMat);
+    barrel.rotation.x = Math.PI/2.5; barrel.position.set(x+0.0,0.55,3); turret.add(barrel);
     barrel.castShadow = true;
   });
 
@@ -218,11 +216,11 @@ function buildSgtYorkMesh(v){
 
   // Front mast + round tracking-radar dome — shorter mast, mushroom-shaped
   // cap flaring wide off a narrow stalk.
-  const frontMast = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,1.0,6), turretMat);
-  frontMast.position.set(0.9,0.8,0.6); turret.add(frontMast);
+  const frontMast = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,2.0,6), turretMat);
+  frontMast.position.set(0.9,1.2,0.6); turret.add(frontMast);
   frontMast.castShadow = true;
-  const domeCap = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.14,0.32,12), turretMat);
-  domeCap.position.set(0,0.66,0); frontMast.add(domeCap);
+  const domeCap = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0,0.4,12), turretMat);
+  domeCap.position.set(0,1.1,0.15); domeCap.rotation.x = 4; frontMast.add(domeCap);
   domeCap.castShadow = true;
 
   return g;
@@ -264,8 +262,8 @@ function buildOsaMesh(v){
   const hull = new THREE.Mesh(new THREE.BoxGeometry(4.4,1.8,7.5), hullMat);
   hull.position.y=1.3; g.add(hull);
   hull.castShadow = true;
-  const bow = new THREE.Mesh(new THREE.BoxGeometry(4.2,1.6,1.6), hullMat);
-  bow.position.set(0,1.3,4.2); bow.rotation.x=-0.55; g.add(bow);
+  const bow = new THREE.Mesh(new THREE.BoxGeometry(4.2,1.4,1.4), hullMat);
+  bow.position.set(0,1.2,3.6); bow.rotation.x=-0.65; g.add(bow);
   bow.castShadow = true;
 
   // Three wheels per side (6x6 wheeled chassis, unlike the SA-6's tracks).
@@ -282,14 +280,14 @@ function buildOsaMesh(v){
   deck.position.y=2.5; deck.name='turret'; g.add(deck);
   deck.castShadow = true;
 
-  const dish = new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.4,0.3,10), dishMat);
-  dish.rotation.x = -0.3; dish.position.set(0,1.4,1.6); deck.add(dish);
+  const dish = new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.1,0.2,12), dishMat);
+  dish.rotation.x = -1.6; dish.position.set(0,1.4,1.6); deck.add(dish);
   dish.castShadow = true;
 
   [-1.6,1.6].forEach(side=>{
     for(let i=0;i<3;i++){
       const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.28,3.4,8), tubeMat);
-      tube.rotation.x = -Math.PI/3;
+      tube.rotation.x = Math.PI/3.5;
       tube.position.set(side + (i-1)*0.55, 1.3, -0.4);
       deck.add(tube);
       tube.castShadow = true;
@@ -333,17 +331,21 @@ function buildKubMesh(v){
   turret.castShadow = true;
 
   const dish = new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,0.25,10), dishMat);
-  dish.position.set(-1.3,0.7,-1.4); turret.add(dish);
+  dish.position.set(-1.3,-0.22,-1.8); turret.add(dish);
 
   [-1,0,1].forEach(x=>{
-    const missile = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.28,5.4,8), missileMat);
+    const missile = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.28,5.4,12), missileMat);
     missile.rotation.x = -Math.PI/3.6; missile.position.set(x*0.85,1.6,0.8); turret.add(missile);
     missile.castShadow = true;
     for(let f=0;f<4;f++){
       const fin = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.05,0.5), finMat);
       fin.rotation.z = f*Math.PI/2;
-      fin.position.set(0,0,-2.4);
+      fin.position.set(0,-2.4,0);
       missile.add(fin);
+	  const nose = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0,1.2,12), missileMat);
+      nose.rotation.x = Math.PI;
+	  nose.position.set(0,3.3,0);
+	  missile.add(nose);
     }
   });
 
@@ -368,8 +370,8 @@ function buildStrela10Mesh(v){
   hull.position.y=0.95; g.add(hull);
   hull.castShadow = true;
 
-  const bow = new THREE.Mesh(new THREE.BoxGeometry(3.0,1.4,1.3), hullMat);
-  bow.position.set(0,0.95,3.4); bow.rotation.x=-0.55; g.add(bow);
+  const bow = new THREE.Mesh(new THREE.BoxGeometry(3.2,1.15,1.15), hullMat);
+  bow.position.set(0,0.92,3.0); bow.rotation.x=-0.65; g.add(bow);
   bow.castShadow = true;
 
   // Six small, closely-spaced road wheels per side — MT-LB's tight-packed
@@ -396,8 +398,8 @@ function buildStrela10Mesh(v){
   // than one solid box (four missiles total).
   [-0.75,0.75].forEach(side=>{
     const pod = new THREE.Mesh(new THREE.BoxGeometry(0.55,0.55,3.2), tubeMat);
-    pod.position.set(side*0.85,0.75,0.2);
-    pod.rotation.x = -0.65; pod.rotation.z = side*0.12;
+    pod.position.set(side*0.85,1.25,0.2);
+    pod.rotation.x = -0.55; pod.rotation.z = side*0.12;
     turret.add(pod);
     pod.castShadow = true;
     [-0.14,0.14].forEach(dx=>{
@@ -407,14 +409,12 @@ function buildStrela10Mesh(v){
     });
   });
 
-  // Large dish on a short gimbal post, reclined sharply back between the
-  // two launcher pods — bigger across than the turret, matching how it
-  // dominates the reference photo's silhouette.
+
   const gimbal = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.8,6), tubeMat);
   gimbal.position.set(0,0.6,-0.8); turret.add(gimbal);
   gimbal.castShadow = true;
-  const dish = new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.3,0.16,18), dishMat);
-  dish.rotation.x = -1.05; dish.position.set(0,0.5,0); gimbal.add(dish);
+  const dish = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.16,18), dishMat);
+  dish.rotation.x = 1.05; dish.position.set(0,0.5,0); gimbal.add(dish);
   dish.castShadow = true;
 
   return g;
@@ -500,26 +500,58 @@ function makeAAA(variantName){
 // mesh, just split out of makeAAA so it's one family among several.
 function buildArmoredAAAMesh(v){
   const g = new THREE.Group();
-  const base = new THREE.Mesh(new THREE.BoxGeometry(4,2,4), new THREE.MeshStandardMaterial({color:v.baseColor, flatShading:true}));
-  base.position.y=1; g.add(base);
-  base.castShadow = true;
-  const mount = new THREE.Mesh(new THREE.BoxGeometry(2,1.4,2), new THREE.MeshStandardMaterial({color:v.turretColor}));
-  mount.position.y=2.6; mount.name='turret'; g.add(mount);
-  mount.castShadow = true;
-  const barrelCount = v.barrels || 2;
-  for(let i=0;i<barrelCount;i++){
-    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.18,4.5,6), new THREE.MeshStandardMaterial({color:v.barrelColor}));
-	bar.castShadow = true;
-    const spread = barrelCount>2 ? (i/(barrelCount-1)-0.5)*1.2 : (i===0?-0.4:0.4);
-    bar.rotation.x=Math.PI/2.3; bar.position.set(spread,0.4,2); mount.add(bar);
+  const hullMat = new THREE.MeshStandardMaterial({color:v.hullColor, flatShading:true});
+  const turretMat = new THREE.MeshStandardMaterial({color:v.turretColor, flatShading:true});
+  const barrelMat = new THREE.MeshStandardMaterial({color:v.barrelColor});
+  const wheelMat = new THREE.MeshStandardMaterial({color:0x1c1c1c, flatShading:true});
+
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(5,3,7), hullMat);
+  hull.position.y=1.6; g.add(hull);
+  hull.castShadow = true;
+
+  const glacis = new THREE.Mesh(new THREE.BoxGeometry(5,2.4,2), hullMat);
+  glacis.position.set(0,1.55,3.5); glacis.rotation.x = -0.72; g.add(glacis);
+  glacis.castShadow = true;
+
+  [-2.6,2.6].forEach(x=>{
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.3,7.2), hullMat);
+    guard.position.set(x,0.9,0); g.add(guard);
+    guard.castShadow = true;
+  });
+
+  for(let i=0;i<6;i++){
+    const z = -3+i*1.2;
+    [-2.75,2.75].forEach(x=>{
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,0.35,10), wheelMat);
+      wheel.rotation.z = Math.PI/2; wheel.position.set(x,0.55,z); g.add(wheel);
+      wheel.castShadow = true;
+    });
   }
-  // Radar-equipped variants (ZSU-30, radar:2) get a small dish on the
-  // turret rear — the visual tell distinguishing them from the
-  // fire-control-only ZSU-23 (radar:1), which stays bare.
-  if(v.radar>1){
-    const dish = new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.35,0.12,10), new THREE.MeshStandardMaterial({color:0x555550}));
-    dish.rotation.x = -0.3; dish.position.set(0,0.9,-1.1); mount.add(dish);
-    dish.castShadow = true;
+
+  // Turret: wider and flatter than a standard MBT turret — the real
+  // system's turret had to be roomy enough for the gun cradle plus the
+  // radar/fire-control electronics behind it.
+  const turret = new THREE.Mesh(new THREE.CylinderGeometry(1.8,1.9,1,6), turretMat);
+  turret.position.y=3.7; turret.name='turret'; g.add(turret);
+  turret.castShadow = true;
+
+  // Twin 40mm cannons, side by side and elevated for the anti-air role —
+  // the reference photo's most obvious feature.
+  [-0.75,0.75].forEach(x=>{
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,5.8,6), barrelMat);
+    barrel.rotation.x = Math.PI/2.5; barrel.position.set(x+0.0,0.55,3); turret.add(barrel);
+    barrel.castShadow = true;
+  });
+
+  const dish = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,0.4,12), turretMat);
+  dish.position.set(0,0.1,2.0); dish.rotation.x = Math.PI/2; turret.add(dish);
+  dish.castShadow = true;
+  if (v.name==='ZSU-30') {
+    [-1.95,1.95].forEach(x=>{
+    const pod = new THREE.Mesh(new THREE.BoxGeometry(0.7,0.7,2.1), barrelMat);
+    pod.rotation.x = 0; pod.position.set(x+0.0,1.85,0); hull.add(pod);
+    pod.castShadow = true;
+  });
   }
   return g;
 }
@@ -622,14 +654,19 @@ function buildS60Mesh(v){
 }
 // makeEnemyHeli dispatches to a family builder by name, same pattern as
 // makeAAA/makeSAM above. Both real sub-types share the same silhouette
-// (buildHindCommon: tandem double-bubble canopy, stub wings with weapon
-// pylons, twin engine nacelles, tricycle gear, tail with stabilizer and
-// tail rotor, main rotor) — the one thing that actually differs between
-// them, and the thing modeled here, is the nose armament: Hind D carries
-// a traversable four-barrel Gatling turret, Hind F a fixed twin-barrel
-// cannon bolted to the side. That's also this game's visual tell for the
-// tougher/faster-reloading Hind F, same idea as the T-74's smoke
-// dischargers or the ZSU-30's radar dish.
+// (buildHindCommon: long tapered nose, tandem double-bubble canopy, stub
+// wings with weapon pylons, twin engine nacelles under the rotor head, a
+// tapered tail boom ending in a fin and tail rotor, main rotor) — the one
+// thing that actually differs between them, and the thing modeled here, is
+// the nose armament: Hind D carries a traversable four-barrel Gatling turret,
+// Hind F a fixed twin-barrel cannon bolted to the side. That's also this
+// game's visual tell for the tougher/faster-reloading Hind F, same idea as
+// the T-74's smoke dischargers or the ZSU-30's radar dish.
+//
+// Layout (local axes: +Z nose, +Y up; the main rotor hub is at the group
+// origin, so the group's position IS the rotor hub, ~1/3 of the way back from
+// the nose as on the real aircraft — nose tip at about z=+12.6, tail rotor at
+// about z=-24.7).
 function makeEnemyHeli(variantName){
   const v = pickUnitClass('heli', variantName);
   const g = v.name.includes('Hind F') ? buildHindFMesh(v) : buildHindDMesh(v);
@@ -637,68 +674,187 @@ function makeEnemyHeli(variantName){
     dmg:v.dmg, pointsValue:25, grail:v.grail, fireIntervalMin:v.fireIntervalMin, fireIntervalRand:v.fireIntervalRand, flySpeed:v.flySpeed, standoff:v.standoff, cannonArc:v.cannonArc};
   return g;
 }
+
+// ---- Hind mesh helpers ----------------------------------------------------
+// hindLoft(rings, mat): a closed solid made by joining consecutive "rings"
+// (arrays of [x,y,z] points, same point count and order in every ring) with
+// quads, and capping the first and last ring. This is how the fuselage, tail
+// boom (a truncated pyramid), canopies, fin and stabilizer are all built.
+// Non-indexed, so computeVertexNormals() gives flat facets like the rest of
+// the model. Each triangle is oriented to face away from the loft's own
+// centreline, so ring point order doesn't matter (the rings must be convex).
+function hindLoft(rings, mat){
+  const n = rings[0].length;
+  const centre = ring=>{
+    const c=[0,0,0];
+    ring.forEach(p=>{ c[0]+=p[0]; c[1]+=p[1]; c[2]+=p[2]; });
+    return [c[0]/n, c[1]/n, c[2]/n];
+  };
+  const centres = rings.map(centre);
+  const pos = [];
+  const addTri = (a,b,c, ref)=>{
+    // ref = a point that is "inside" the solid near this triangle
+    const ux=b[0]-a[0], uy=b[1]-a[1], uz=b[2]-a[2];
+    const vx=c[0]-a[0], vy=c[1]-a[1], vz=c[2]-a[2];
+    const nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx;
+    const cx=(a[0]+b[0]+c[0])/3-ref[0], cy=(a[1]+b[1]+c[1])/3-ref[1], cz=(a[2]+b[2]+c[2])/3-ref[2];
+    if(nx*cx+ny*cy+nz*cz < 0) pos.push(...a,...c,...b);
+    else pos.push(...a,...b,...c);
+  };
+  for(let r=0;r<rings.length-1;r++){
+    const A=rings[r], B=rings[r+1];
+    const ref=[(centres[r][0]+centres[r+1][0])/2,(centres[r][1]+centres[r+1][1])/2,(centres[r][2]+centres[r+1][2])/2];
+    for(let i=0;i<n;i++){
+      const j=(i+1)%n;
+      addTri(A[i],A[j],B[j],ref);
+      addTri(A[i],B[j],B[i],ref);
+    }
+  }
+  const cap=(ring,cen,inside)=>{
+    for(let i=0;i<n;i++) addTri(cen,ring[i],ring[(i+1)%n],inside);
+  };
+  cap(rings[0], centres[0], centres[1]);
+  cap(rings[rings.length-1], centres[rings.length-1], centres[rings.length-2]);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, mat);
+  m.castShadow = true;
+  return m;
+}
+// 8-point cross-section at station z: flat belly (slightly narrower than the
+// sides), near-vertical flanks, chamfered roof. hw = half width.
+function hindRing(z, hw, yBot, yTop, chamfer, belly=0.8){
+  const h=yTop-yBot, c=Math.min(chamfer, hw*0.9, h*0.45), hb=hw*belly;
+  return [
+    [ hb, yBot, z], [ hw, yBot+h*0.25, z], [ hw, yTop-c, z], [ hw-c, yTop, z],
+    [-(hw-c), yTop, z], [-hw, yTop-c, z], [-hw, yBot+h*0.25, z], [-hb, yBot, z]
+  ];
+}
+// 4-point rectangular cross-section — stacking two or more of these gives a
+// truncated rectangular pyramid (the tail boom).
+function hindRectRing(z, hw, yBot, yTop){
+  return [[hw,yBot,z],[hw,yTop,z],[-hw,yTop,z],[-hw,yBot,z]];
+}
+
 function buildHindCommon(v){
   const g = new THREE.Group();
   const bodyMat = new THREE.MeshStandardMaterial({color:v.bodyColor, flatShading:true});
-  const tailMat = new THREE.MeshStandardMaterial({color:v.tailColor});
-  const glassMat = new THREE.MeshStandardMaterial({color:0x1a2a30, transparent:true, opacity:0.75, flatShading:true});
+  const tailMat = new THREE.MeshStandardMaterial({color:v.tailColor, flatShading:true});
+  const glassMat = new THREE.MeshStandardMaterial({color:0x2a4650, transparent:true, opacity:0.78, flatShading:true});
   const darkMat = new THREE.MeshStandardMaterial({color:0x1c1c1c, flatShading:true});
+  const add = m=>{ g.add(m); return m; };
 
-  const body = new THREE.Mesh(new THREE.BoxGeometry(3.8,3.6,8), bodyMat);
-  body.position.y = 0.4; g.add(body);
-  body.castShadow = true;
+  // Fuselage: nose tip -> cabin -> rear taper that meets the tail boom.
+  // ring(z, halfWidth, belly y, roof y, roof chamfer)
+  add(hindLoft([
+    hindRing( 12.6, 0.75, -1.0, 0.3, 0.30),
+    hindRing( 10.8, 1.40, -1.35, 1.1, 0.5),
+    hindRing(  8.0, 1.85, -1.4, 1.7, 0.6),
+    hindRing(  5.0, 2.00, -1.4, 2.1, 0.7),
+    hindRing(  1.0, 2.05, -1.4, 3.1, 0.8),
+    hindRing( -2.5, 2.05, -1.4, 3.4, 0.8),
+    hindRing( -6.0, 1.75, -1.1, 3.2, 0.6),
+    hindRing( -8.0, 1.35, -0.6, 2.9, 0.4)
+  ], bodyMat));
 
-  // Tandem "double-bubble" canopy — gunner's lower forward bubble, the
-  // pilot's raised bubble just behind and above it. The Hind's single
-  // most recognizable feature, and the one thing the old plain box body
-  // completely missed.
-  const gunnerCanopy = new THREE.Mesh(new THREE.BoxGeometry(2.4,1.3,2.2), glassMat);
-  gunnerCanopy.position.set(0,1.6,3.1); g.add(gunnerCanopy);
-  const pilotCanopy = new THREE.Mesh(new THREE.BoxGeometry(2.6,1.4,2.0), glassMat);
-  pilotCanopy.position.set(0,2.7,1.4); g.add(pilotCanopy);
+  // Tandem "double-bubble" canopy, two clearly separate blisters: the
+  // gunner's lower one out on the nose, the pilot's taller one behind and
+  // above it, with a visible step between them.
+  add(hindLoft([                                   // gunner
+    hindRing( 11.9, 0.60, 0.35, 1.00, 0.20),
+    hindRing( 10.4, 1.00, 0.95, 2.40, 0.45),
+    hindRing(  8.2, 1.15, 1.50, 2.70, 0.50),
+    hindRing(  7.0, 1.20, 1.60, 2.40, 0.40)
+  ], glassMat));
+  add(hindLoft([                                   // pilot
+    hindRing(  6.6, 1.30, 1.90, 3.30, 0.55),
+    hindRing(  5.0, 1.40, 2.20, 3.90, 0.60),
+    hindRing(  3.2, 1.40, 2.40, 3.90, 0.60),
+    hindRing(  1.8, 1.15, 2.90, 3.50, 0.40)
+  ], glassMat));
+  // Dark frame strip between the two bubbles, so they read as two.
+  const frame = add(new THREE.Mesh(new THREE.BoxGeometry(2.5,0.3,0.35), darkMat));
+  frame.position.set(0,2.2,6.8);
 
-  // Stub wings with weapon pylons — the other unmistakable Hind feature.
+  // Twin engine nacelles on top of the cabin, feeding the rotor head: dark
+  // intake discs at the front, small exhaust cones at the back.
+  [-1.0,1.0].forEach(x=>{
+    const nacelle = add(new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.75,6.6,8), bodyMat));
+    nacelle.rotation.x = Math.PI/2; nacelle.position.set(x,4.0,-1.8);
+    nacelle.castShadow = true;
+    const intake = add(new THREE.Mesh(new THREE.CylinderGeometry(0.62,0.62,0.4,8), darkMat));
+    intake.rotation.x = Math.PI/2; intake.position.set(x,4.0,1.6);
+    const exhaust = add(new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.3,0.9,8), darkMat));
+    exhaust.rotation.x = -Math.PI/2; exhaust.position.set(x,4.0,-5.4);
+  });
+  // Gearbox fairing, mast and hub under the rotor.
+  const gearbox = add(new THREE.Mesh(new THREE.CylinderGeometry(0.75,1.15,1.1,8), bodyMat));
+  gearbox.position.set(0,4.9,0);
+  const mast = add(new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.32,1.0,6), darkMat));
+  mast.position.set(0,5.6,0);
+  const hub = add(new THREE.Mesh(new THREE.CylinderGeometry(0.8,0.8,0.35,8), darkMat));
+  hub.position.set(0,5.95,0);
+
+  // Stub wings with weapon pylons, just behind the rotor mast, drooping
+  // slightly toward the tips — the other unmistakable Hind feature.
   [-1,1].forEach(side=>{
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(3.2,0.4,1.6), bodyMat);
-    wing.position.set(side*3,1.2,-0.5); wing.rotation.z = side*-0.12; g.add(wing);
+    const wing = add(new THREE.Mesh(new THREE.BoxGeometry(3.7,0.35,2.0), bodyMat));
+    wing.position.set(side*3.6,0.7,-1.2); wing.rotation.z = side*-0.1;
     wing.castShadow = true;
     for(let i=0;i<2;i++){
-      const pylon = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,1.4,6), darkMat);
-      pylon.rotation.x = Math.PI/2; pylon.position.set(side*(2.2+i*1.5),0.6,-0.5); g.add(pylon);
+      const pylon = add(new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,1.8,6), darkMat));
+      pylon.rotation.x = Math.PI/2; pylon.position.set(side*(2.9+i*1.5),-0.1,-1.2);
       pylon.castShadow = true;
     }
   });
 
-  // Twin engine nacelles feeding the main rotor mast.
-  [-0.9,0.9].forEach(x=>{
-    const nacelle = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.6,3,8), bodyMat);
-    nacelle.rotation.x = Math.PI/2; nacelle.position.set(x,2.3,0.6); g.add(nacelle);
-    nacelle.castShadow = true;
+  // Landing gear, mostly retracted: stubby struts with the wheels just
+  // showing below the belly. Nose wheel forward, two mains near the wings.
+  [[-1.5,-1.0],[1.5,-1.0],[0,9.2]].forEach(([x,z])=>{
+    const strut = add(new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.9,5), darkMat));
+    strut.position.set(x,-1.8,z);
+    const wheel = add(new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.4,0.3,8), darkMat));
+    wheel.rotation.z = Math.PI/2; wheel.position.set(x,-2.2,z);
   });
 
-  // Tricycle landing gear: single nose wheel forward, two main wheels
-  // near the centre of gravity.
-  [[-1.6,0.5],[1.6,0.5],[0,3.6]].forEach(([x,z])=>{
-    const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,1.3,5), darkMat);
-    strut.position.set(x,0.55,z); g.add(strut);
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,0.28,8), darkMat);
-    wheel.rotation.z = Math.PI/2; wheel.position.set(x,0.05,z); g.add(wheel);
-  });
+  // Tail boom: a truncated rectangular pyramid, tapering from the cabin's
+  // rear all the way down to a slim stub at the tail rotor. Its root sits
+  // just inside the fuselage's own rear taper so there's no visible gap.
+  add(hindLoft([
+    hindRectRing(-7.4, 1.35, -0.40, 2.90),
+    hindRectRing(-23.6, 0.40,  0.40, 1.60)
+  ], tailMat));
+  // Fin: swept up and back from the end of the boom.
+  add(hindLoft([
+    [[ 0.28,1.3,-18.8],[ 0.28,1.3,-23.8],[-0.28,1.3,-23.8],[-0.28,1.3,-18.8]],
+    [[ 0.18,5.2,-22.4],[ 0.18,5.2,-25.0],[-0.18,5.2,-25.0],[-0.18,5.2,-22.4]]
+  ], tailMat));
+  // Horizontal stabilizer: tapered, widest at the root.
+  add(hindLoft([
+    [[-2.7,1.05,-22.8],[-2.7,1.05,-23.7],[-2.7,0.85,-23.7],[-2.7,0.85,-22.8]],
+    [[ 0.0,1.07,-20.8],[ 0.0,1.07,-23.6],[ 0.0,0.83,-23.6],[ 0.0,0.83,-20.8]],
+    [[ 2.7,1.05,-22.8],[ 2.7,1.05,-23.7],[ 2.7,0.85,-23.7],[ 2.7,0.85,-22.8]]
+  ], tailMat));
+  // Small tail bumper under the boom.
+  const bumper = add(new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,1.1,5), darkMat));
+  bumper.position.set(0,-0.3,-17);
+  const bumperWheel = add(new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,0.2,8), darkMat));
+  bumperWheel.rotation.z = Math.PI/2; bumperWheel.position.set(0,-0.9,-17);
 
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(1.3,1.9,23), tailMat);
-  tail.position.set(0,0.4,-14); g.add(tail);
-  tail.castShadow = true;
+  // Small static tail rotor on the fin — cosmetic only; updateEnemies spins
+  // the main rotor by name, this one just sits there.
+  const tailRotor = add(new THREE.Mesh(new THREE.BoxGeometry(0.08,3.2,0.12), darkMat));
+  tailRotor.position.set(0.5,4.4,-24.7);
 
-  const stab = new THREE.Mesh(new THREE.BoxGeometry(4.4,0.25,1.1), tailMat);
-  stab.position.set(0,0.8,-23); g.add(stab);
+  // Pitot probe sticking out ahead of the nose.
+  const pitot = add(new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,1.8,4), darkMat));
+  pitot.rotation.x = Math.PI/2; pitot.position.set(-0.9,-0.1,13.2);
 
-  // Small static tail rotor — cosmetic only; updateEnemies spins the main
-  // rotor by name, this one just sits there.
-  const tailRotor = new THREE.Mesh(new THREE.BoxGeometry(0.08,3.2,0.08), darkMat);
-  tailRotor.position.set(0.75,1.4,-25.3); g.add(tailRotor);
-
+  // Main rotor — named so updateEnemies spins it, and the debris code gives
+  // it its own fast spin when the Hind breaks up. Centred on the hub.
   const rotor = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.1,35), new THREE.MeshStandardMaterial({color:0x111}));
-  rotor.position.y=3.6; rotor.name='rotor'; g.add(rotor);
+  rotor.position.y=6.15; rotor.name='rotor'; g.add(rotor);
 
   return g;
 }
@@ -707,28 +863,27 @@ function buildHindCommon(v){
 function buildHindDMesh(v){
   const g = buildHindCommon(v);
   const darkMat = new THREE.MeshStandardMaterial({color:0x1c1c1c, flatShading:true});
-  const turret = new THREE.Mesh(new THREE.SphereGeometry(0.55,8,8), darkMat);
-  turret.position.set(0,0.6,4.3); g.add(turret);
+  const turret = new THREE.Mesh(new THREE.SphereGeometry(0.7,8,8), darkMat);
+  turret.position.set(0,-1.4,10.6); g.add(turret);
   turret.castShadow = true;
   for(let i=0;i<4;i++){
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.1,5), darkMat);
-    barrel.rotation.x = Math.PI/2; barrel.position.set((i-1.5)*0.12,0.6,5.1); g.add(barrel);
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,1.8,5), darkMat);
+    barrel.rotation.x = Math.PI/2; barrel.position.set((i-1.5)*0.16,-1.4,11.9); g.add(barrel);
   }
   return g;
 }
-// Hind F: fixed twin-barrel 30mm cannon bolted to the starboard side of
-// the nose rather than a turret — the real Mi-24P's distinguishing
-// feature, and this game's visual tell for the tougher/faster-reload
-// variant.
+// Hind F: fixed twin-barrel 30mm cannon bolted to the side of the forward
+// fuselage rather than a turret — the real Mi-24P's distinguishing feature,
+// and this game's visual tell for the tougher/faster-reload variant.
 function buildHindFMesh(v){
   const g = buildHindCommon(v);
   const darkMat = new THREE.MeshStandardMaterial({color:0x1c1c1c, flatShading:true});
-  const mount = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.5,1.4), darkMat);
-  mount.position.set(0.9,1.0,4); g.add(mount);
+  const mount = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.7,2.2), darkMat);
+  mount.position.set(2.2,0.1,4.6); g.add(mount);
   mount.castShadow = true;
-  [-0.12,0.12].forEach(dx=>{
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,1.6,6), darkMat);
-    barrel.rotation.x = Math.PI/2; barrel.position.set(0.9+dx,1.0,5.1); g.add(barrel);
+  [-0.18,0.18].forEach(dx=>{
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,3.4,6), darkMat);
+    barrel.rotation.x = Math.PI/2; barrel.position.set(2.2+dx,0.1,7.2); g.add(barrel);
   });
   return g;
 }
@@ -750,7 +905,7 @@ function buildProneSoldier(bodyMat, headMat){
   // Legs: two thinner segments trailing behind the torso, splayed
   // slightly apart at the feet the way a prone stance naturally spreads.
   [-0.13,0.13].forEach(x=>{
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.15,1.15,6), bodyMat);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.15,1.18,6), bodyMat);
     leg.rotation.x = Math.PI/2; leg.rotation.z = x<0 ? 0.1 : -0.1;
     leg.position.set(x,0.16,-1.15);
     s.add(leg); leg.castShadow = true;
@@ -758,7 +913,7 @@ function buildProneSoldier(bodyMat, headMat){
 
   // Head: raised just above the shoulders, peering forward.
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.19,6,6), headMat);
-  head.position.set(0,0.36,0.85);
+  head.position.set(0,0.36,0.72);
   s.add(head);
 
   // Forearms: propped up under the chest, elbows out, hands forward —
@@ -768,11 +923,18 @@ function buildProneSoldier(bodyMat, headMat){
     arm.rotation.x = Math.PI/2.3; arm.rotation.z = x<0 ? 0.15 : -0.15;
     arm.position.set(x,0.27,0.55);
     s.add(arm); arm.castShadow = true;
+	if (Math.sign(x)==1) {
+	  arm.rotation.x = Math.PI/1.8
+	  const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.08,0.7,5), bodyMat);
+	  forearm.position.set(-0.1,0.6,-0.1);
+	  forearm.rotation.set(-0.3,0,0.3);
+	  arm.add(forearm);
+	}
   });
 
   // Rifle, laid along the aiming line out past the head.
   const rifle = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.035,1.15,5), darkMat);
-  rifle.rotation.x = Math.PI/2; rifle.position.set(0,0.33,1.25);
+  rifle.rotation.x = Math.PI/2.4; rifle.position.set(0.1,0.28,1.25);
   s.add(rifle);
 
   return s;

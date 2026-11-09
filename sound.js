@@ -1,6 +1,22 @@
 // Sound
 
+// Noise buffers are pooled per duration (NOISE_POOL_SIZE variants each, picked
+// at random) instead of refilling a fresh buffer with Math.random() on every
+// shot - the 3.5 s rocketWhoosh buffer alone is ~170k samples.
+const NOISE_POOL_SIZE = 3;
+const _noisePool = new Map();
 function noiseBuffer(duration = 2) {
+  let pool = _noisePool.get(duration);
+  if (!pool) { pool = []; _noisePool.set(duration, pool); }
+  if (pool.length < NOISE_POOL_SIZE) {
+    const b = makeNoiseBuffer(duration);
+    pool.push(b);
+    return b;
+  }
+  return pool[(Math.random() * pool.length) | 0];
+}
+
+function makeNoiseBuffer(duration) {
   const buffer = audioCtx.createBuffer(
     1,
     audioCtx.sampleRate * duration,
@@ -60,12 +76,15 @@ function rocketWhoosh(n) {
 }
 
 // 2. Distant gunfire
+// Full volume inside DISTANT_GUNFIRE_REF metres, then falls off as 1/distance
+// (0.2x at the 1500 m cutoff).
+const DISTANT_GUNFIRE_REF = 300;
 function distantGunfire(dist=1000) { // time delay
   if (dist>1500) return;
   let t=dist/400;
   const now = audioCtx.currentTime+t;
   // A short, filtered noise burst gives the distant "crack".
-  function shot(time, volume = 0.10*1000/dist) {
+  function shot(time, volume) {
     const source = audioCtx.createBufferSource();
     source.buffer = noiseBuffer(0.18);
 
@@ -84,15 +103,16 @@ function distantGunfire(dist=1000) { // time delay
     gain.gain.exponentialRampToValueAtTime(volume, time + 0.008);
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.14);
 
-    source.start(time+t);
-    source.stop(time + 0.18+t);
+    source.start(time);       // `time` already includes the travel delay t (see `now`)
+    source.stop(time + 0.18);
   }
 
   // Irregular timing makes it sound less mechanical.
-  shot(now, 0.13);
-  shot(now + 0.42, 0.10);
-  shot(now + 1.05, 0.15);
-  shot(now + 1.72, 0.08);
+  const atten = Math.min(1, DISTANT_GUNFIRE_REF / Math.max(dist, 1));
+  shot(now, 0.13 * atten);
+  shot(now + 0.42, 0.10 * atten);
+  shot(now + 1.05, 0.15 * atten);
+  shot(now + 1.72, 0.08 * atten);
 }
 
 // 3. Nearby explosion
@@ -147,6 +167,7 @@ function nearbyExplosion(dist=100) {
 function chainGun(source='player', dist=0) {
   if (dist>1800) return;
   let t=dist/400;
+  let vol=9/(dist>10?dist:10);
   const now = audioCtx.currentTime+t;
 
   // Layer 1: sharp broadband crack — the transient "snap" of the round leaving the barrel.
@@ -161,7 +182,7 @@ function chainGun(source='player', dist=0) {
   crackFilter.connect(crackGain);
   crackGain.connect(audioCtx.destination);
   crackGain.gain.setValueAtTime(0.001, now);
-  crackGain.gain.exponentialRampToValueAtTime(1.0, now + 0.004);
+  crackGain.gain.exponentialRampToValueAtTime(vol, now + 0.004);
   crackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
   crack.start(now);
   crack.stop(now + 0.05);
@@ -169,18 +190,15 @@ function chainGun(source='player', dist=0) {
   // Layer 2: low punchy body — a fast downward-sweeping thump giving the round its "cannon" weight.
   const body = audioCtx.createOscillator();
   body.type = "triangle";
-  body.frequency.setValueAtTime(source='player'?160:210, now);
+  body.frequency.setValueAtTime(source==='player'?160:210, now);
   body.frequency.exponentialRampToValueAtTime(48, now + 0.09);
   const bodyGain = audioCtx.createGain();
   body.connect(bodyGain);
   bodyGain.connect(audioCtx.destination);
   bodyGain.gain.setValueAtTime(0.001, now);
-  bodyGain.gain.exponentialRampToValueAtTime(1.1, now + 0.01);
+  bodyGain.gain.exponentialRampToValueAtTime(vol, now + 0.01);
   bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
   
-  body.frequency.exponentialRampToValueAtTime(35, now + 0.17);
-  bodyGain.gain.exponentialRampToValueAtTime(1.1, now + 0.151);
-  bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
   body.start(now);
   body.stop(now + 0.16);
 
@@ -198,7 +216,7 @@ function chainGun(source='player', dist=0) {
   boomFilter.connect(boomGain);
   boomGain.connect(audioCtx.destination);
   boomGain.gain.setValueAtTime(0.001, now);
-  boomGain.gain.exponentialRampToValueAtTime(0.9, now + 0.008);
+  boomGain.gain.exponentialRampToValueAtTime(vol, now + 0.008);
   boomGain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
   boom.start(now);
   boom.stop(now + 0.2);
@@ -247,6 +265,17 @@ function engineStopTone(){
 // updatePlayer() with the current rotorRpm/engFactor, and torn down when
 // the mission ends (stopLoopAudio).
 let loopAudio = null;
+const ENGINE_PULSE_DEPTH = 0.18; // gentle +/- amplitude pulsing of the engine bed
+const ENGINE_LOOP_SCALE  = 1.2;  // engine bed loudness; tune by ear (0 = silent)
+
+// Wind rush: driven by TOTAL airspeed (not excess over any limit). Silent at
+// or below WIND_START_SPEED, then rises smoothly, reaching full level (and
+// its brightest/whistliest) at WIND_FULL_SPEED.
+const WIND_START_SPEED = 40;    // m/s
+const WIND_FULL_SPEED  = 140;   // m/s
+const WIND_MAX         = 0.18;  // wind bed loudness at full speed; tune by ear
+const WIND_WHISTLE     = 1.5;   // thin whistle mixed over the bed at speed (0 = none)
+const WIND_GUST_DEPTH  = 0.25;  // slow +/- gusting of the wind level
 
 // Brown noise via a leaky integrator over white noise — much "airier" and
 // less hissy than flat white noise, good raw material for a rotor whoosh.
@@ -340,31 +369,88 @@ lfo.type = "triangle";
 lfo.frequency.value = 12; // ~3000 RPM / 4-cylinder-ish feel
 
 const lfoGain = audioCtx.createGain();
-lfoGain.gain.value = 0.18;
+lfoGain.gain.value = ENGINE_PULSE_DEPTH;
 
 const engineGain = audioCtx.createGain();
 engineGain.gain.value = 0.0005;
 
-// LFO modulates the gain slightly rather than fully gating it
+// The LFO drives its OWN gain stage (centred on 1.0, so x(1 +/- depth)).
+// Previously it was added straight onto engineGain.gain, where +/-0.18 swamped
+// the 0-0.09 volume range: the engine was equally loud (and chopping) with
+// the engines off, and throttle barely changed it.
+const engineMod = audioCtx.createGain();
+engineMod.gain.value = 1;
 lfo.connect(lfoGain);
-lfoGain.connect(engineGain.gain);
+lfoGain.connect(engineMod.gain);
 
 engineSource
   .connect(rumble)
   .connect(growl)
+  .connect(engineMod)
   .connect(engineGain)
   .connect(audioCtx.destination);
 
 lfo.start();
 engineSource.start();
 
+// --- Wind: white noise -> high-pass -> band-pass (centre rises with speed)
+// -> gust modulation -> volume. A narrow high-Q band-pass of the same noise is
+// mixed in as a faint whistle that only builds at higher speeds.
+const windSource = audioCtx.createBufferSource();
+windSource.buffer = noiseBuffer(3);
+windSource.loop = true;
+
+const windHP = audioCtx.createBiquadFilter();
+windHP.type = "highpass";
+windHP.frequency.value = 120;
+windHP.Q.value = 0.5;
+
+const windFilter = audioCtx.createBiquadFilter();
+windFilter.type = "bandpass";
+windFilter.frequency.value = 400;
+windFilter.Q.value = 0.7;
+
+const whistleFilter = audioCtx.createBiquadFilter();
+whistleFilter.type = "bandpass";
+whistleFilter.frequency.value = 1600;
+whistleFilter.Q.value = 14;
+const whistleGain = audioCtx.createGain();
+whistleGain.gain.value = 0;
+
+// Slow gusting: own gain stage centred on 1.0 (see the engine LFO note above).
+const windMod = audioCtx.createGain();
+windMod.gain.value = 1;
+const windLfo = audioCtx.createOscillator();
+windLfo.type = "sine";
+windLfo.frequency.value = 0.45;
+const windLfoGain = audioCtx.createGain();
+windLfoGain.gain.value = WIND_GUST_DEPTH;
+windLfo.connect(windLfoGain);
+windLfoGain.connect(windMod.gain);
+
+const windGain = audioCtx.createGain();
+windGain.gain.value = 0.0001;
+
+windSource.connect(windHP);
+windHP.connect(windFilter);
+windFilter.connect(windMod);
+windSource.connect(whistleFilter);
+whistleFilter.connect(whistleGain);
+whistleGain.connect(windMod);
+windMod.connect(windGain);
+windGain.connect(audioCtx.destination);
+
+windSource.start();
+windLfo.start();
+
   loopAudio = {
     rotorNoise, pulseOsc, rotorGain, rotorFilter,
-    engineSource, engineGain, rumble, growl
+    engineSource, engineGain, rumble, growl, lfo,
+    windSource, windLfo, windGain, windFilter, whistleGain
   };
 }
 
-function updateLoopAudio(rotorRpm, engFactor, anyEngineOn, climb, alt){
+function updateLoopAudio(rotorRpm, engFactor, anyEngineOn, climb, alt, airspeed){
   if (!loopAudio) return;
   const now = audioCtx.currentTime;
   const rpm = Math.max(0, rotorRpm ?? 0);
@@ -373,27 +459,40 @@ function updateLoopAudio(rotorRpm, engFactor, anyEngineOn, climb, alt){
   // so the whoosh pulse rate) rises with it too. Silent when not spinning.
   const rotorVol = rpm > 0.03 ? Math.min(0.24, 0.05 + rpm * 0.2) : 0;
   loopAudio.rotorGain.gain.setTargetAtTime(rotorVol, now, 0.15);
-  loopAudio.rotorFilter.frequency.setTargetAtTime(1200 + rpm * 500 + Math.max(climb*300,-300) + Math.max(alt*20, 900), now, 0.2);
+  loopAudio.rotorFilter.frequency.setTargetAtTime(1200 + rpm * 500 + Math.max(climb*300,-300) + Math.min(Math.max(alt,0)*20, 900), now, 0.2);
   loopAudio.pulseOsc.frequency.setTargetAtTime(2 + rpm * 8, now, 0.2);
 
   // Engine roar: present whenever at least one engine is running, scaled by
   // combined power, deliberately kept quiet relative to the rotor and effects.
   const ef = Math.max(0, Math.min(1, engFactor ?? 0));
   const engineVol = anyEngineOn ? Math.min(0.09, 0.02 + ef * 0.07) : 0;
-  loopAudio.engineGain.gain.setTargetAtTime(engineVol, now, 0.25);
   loopAudio.growl.frequency.setTargetAtTime(180 + ef * 300,now,0.3);
   loopAudio.rumble.frequency.setTargetAtTime(100 + ef * 60,now,0.4);
-  loopAudio.engineGain.gain.setTargetAtTime(engineVol * 0.6, now,0.25);}
+  loopAudio.engineGain.gain.setTargetAtTime(engineVol * ENGINE_LOOP_SCALE, now, 0.25);
+
+  // Wind rush from total airspeed: 0 at WIND_START_SPEED, 1 at WIND_FULL_SPEED.
+  // Volume, filter brightness and whistle all build with it; the target
+  // smoothing means it fades in/out rather than gating at the threshold.
+  const wt = Math.max(0, Math.min(1, ((airspeed ?? 0) - WIND_START_SPEED) / (WIND_FULL_SPEED - WIND_START_SPEED)));
+  loopAudio.windGain.gain.setTargetAtTime(Math.max(0.0001, WIND_MAX * Math.pow(wt, 0.8)), now, 0.35);
+  loopAudio.windFilter.frequency.setTargetAtTime(400 + wt * 2200, now, 0.35);
+  loopAudio.whistleGain.gain.setTargetAtTime(WIND_WHISTLE * wt, now, 0.5);
+}
 
 function stopLoopAudio(){
   if (!loopAudio) return;
   const now = audioCtx.currentTime;
-  const { rotorNoise, pulseOsc, rotorGain, engineSource, engineGain } = loopAudio;
+  const { rotorNoise, pulseOsc, rotorGain, engineSource, engineGain, lfo,
+          windSource, windLfo, windGain } = loopAudio;
   rotorGain.gain.setTargetAtTime(0.0001, now, 0.08);
   engineGain.gain.setTargetAtTime(0.0001, now, 0.08);
+  windGain.gain.setTargetAtTime(0.0001, now, 0.08);
   rotorNoise.stop(now + 0.4);
   pulseOsc.stop(now + 0.4);
   engineSource.stop(now + 0.4);
+  lfo.stop(now + 0.4);
+  windSource.stop(now + 0.4);
+  windLfo.stop(now + 0.4);
   loopAudio = null;
 }
 
@@ -531,7 +630,7 @@ function irJammer(){
 	tosc.frequency.exponentialRampToValueAtTime(10, now + 0.9);
 	tfilter.frequency.exponentialRampToValueAtTime(30, now + 0.9);
 	
-    tosc.connect(tgain);
+    tfilter.connect(tgain);   // was tosc.connect(tgain): bypassed the low-pass
     tgain.connect(audioCtx.destination)
 	
 	source.start(now);
@@ -576,3 +675,215 @@ function rotorAlarm(){
 	lfo.stop(now+1.252);
 }
 
+// Rotor over-speed damage: a bearing seizing / metal grinding on metal.
+// One-shot (~0.5-0.65 s) and safe to call every time damage is applied - it
+// ignores calls inside a short random gap so repeated calls chain into a
+// continuous grind rather than stacking up. `intensity` 0..1 sets loudness.
+// Layers: a ratcheting band-passed noise scrape that sweeps down, a wobbling
+// low groan that drops in pitch as the bearing binds, and a faint scratchy squeal.
+let _grindNext = 0;
+function rotorGrind(intensity = 0.5) {
+  const now = audioCtx.currentTime;
+  if (now < _grindNext) return;
+  _grindNext = now + 0.30 + Math.random() * 0.15;
+  const k = Math.max(0, Math.min(1, intensity));
+  const dur = 0.5 + Math.random() * 0.15;
+  const peak = 0.08 + 0.14 * k;
+  const end = now + dur + 0.05;
+
+  const master = audioCtx.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(peak, now + 0.04);
+  master.gain.exponentialRampToValueAtTime(peak * 0.6, now + dur * 0.6);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  master.connect(audioCtx.destination);
+
+  // Ratchet: a sawtooth LFO (0..1 ramps ~30-45 times a second) chops the scrape.
+  const ratchet = audioCtx.createOscillator();
+  ratchet.type = "sawtooth";
+  ratchet.frequency.value = 30 + Math.random() * 15;
+
+  // 1. Scrape
+  const scrape = audioCtx.createBufferSource();
+  scrape.buffer = noiseBuffer(0.7);
+  const scrapeBP = audioCtx.createBiquadFilter();
+  scrapeBP.type = "bandpass";
+  scrapeBP.Q.value = 4;
+  const f0 = 1100 + Math.random() * 500;
+  scrapeBP.frequency.setValueAtTime(f0, now);
+  scrapeBP.frequency.exponentialRampToValueAtTime(f0 * 0.6, now + dur);
+  const chop = audioCtx.createGain();
+  chop.gain.value = 0.5;
+  const chopDepth = audioCtx.createGain();
+  chopDepth.gain.value = 0.5;
+  ratchet.connect(chopDepth);
+  chopDepth.connect(chop.gain);
+  const scrapeLevel = audioCtx.createGain();
+  scrapeLevel.gain.value = 4;
+  scrape.connect(scrapeBP);
+  scrapeBP.connect(chop);
+  chop.connect(scrapeLevel);
+  scrapeLevel.connect(master);
+
+  // 2. Groan
+  const groan = audioCtx.createOscillator();
+  groan.type = "sawtooth";
+  groan.frequency.setValueAtTime(70, now);
+  groan.frequency.exponentialRampToValueAtTime(38, now + dur);
+  const wobble = audioCtx.createOscillator();
+  wobble.type = "sine";
+  wobble.frequency.value = 7;
+  const wobbleDepth = audioCtx.createGain();
+  wobbleDepth.gain.value = 6;
+  wobble.connect(wobbleDepth);
+  wobbleDepth.connect(groan.frequency);
+  const groanLP = audioCtx.createBiquadFilter();
+  groanLP.type = "lowpass";
+  groanLP.frequency.value = 380;
+  groanLP.Q.value = 1;
+  const groanLevel = audioCtx.createGain();
+  groanLevel.gain.value = 0.35;
+  groan.connect(groanLP);
+  groanLP.connect(groanLevel);
+  groanLevel.connect(master);
+
+  // 3. Squeal: scratchy because the ratchet LFO also jitters its pitch
+  const squeal = audioCtx.createOscillator();
+  squeal.type = "triangle";
+  squeal.frequency.setValueAtTime(2300, now);
+  squeal.frequency.exponentialRampToValueAtTime(1500, now + dur);
+  const squealJitter = audioCtx.createGain();
+  squealJitter.gain.value = 60;
+  ratchet.connect(squealJitter);
+  squealJitter.connect(squeal.frequency);
+  const squealLevel = audioCtx.createGain();
+  squealLevel.gain.value = 0.012 + 0.02 * k;
+  squeal.connect(squealLevel);
+  squealLevel.connect(master);
+
+  scrape.start(now);
+  groan.start(now);
+  squeal.start(now);
+  ratchet.start(now);
+  wobble.start(now);
+  scrape.stop(end);
+  groan.stop(end);
+  squeal.stop(end);
+  ratchet.stop(end);
+  wobble.stop(end);
+}
+
+// Player craft destroyed: deep rolling rumble with a heavy impact thump and
+// tearing-metal crunch, ~3 s. Played once from endMissionCrash() and carries on
+// under the crash screen. CRASH_RUMBLE_VOLUME is the overall level (by estimate,
+// tune by ear). Layers: sine thump dropping 75->26 Hz; sub triangle; low-passed
+// brown noise whose cut-off sweeps down with a slow rolling tremolo; a short
+// band-passed crunch burst plus a few random debris ticks.
+const CRASH_RUMBLE_VOLUME = 0.7;
+function crashRumble() {
+  const now = audioCtx.currentTime;
+  const dur = 3.0;
+  const end = now + dur + 0.1;
+
+  const master = audioCtx.createGain();
+  master.gain.value = CRASH_RUMBLE_VOLUME;
+  master.connect(audioCtx.destination);
+
+  // 1. Impact thump
+  const thump = audioCtx.createOscillator();
+  thump.type = "sine";
+  thump.frequency.setValueAtTime(75, now);
+  thump.frequency.exponentialRampToValueAtTime(26, now + 0.6);
+  const thumpGain = audioCtx.createGain();
+  thumpGain.gain.setValueAtTime(0.0001, now);
+  thumpGain.gain.exponentialRampToValueAtTime(0.9, now + 0.01);
+  thumpGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+  thump.connect(thumpGain);
+  thumpGain.connect(master);
+
+  // 2. Sub-bass body
+  const sub = audioCtx.createOscillator();
+  sub.type = "triangle";
+  sub.frequency.setValueAtTime(52, now);
+  sub.frequency.exponentialRampToValueAtTime(30, now + dur);
+  const subGain = audioCtx.createGain();
+  subGain.gain.setValueAtTime(0.0001, now);
+  subGain.gain.exponentialRampToValueAtTime(0.5, now + 0.03);
+  subGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  sub.connect(subGain);
+  subGain.connect(master);
+
+  // 3. Rolling rumble
+  const rumble = audioCtx.createBufferSource();
+  rumble.buffer = brownNoiseBuffer(3);
+  const rumbleLP = audioCtx.createBiquadFilter();
+  rumbleLP.type = "lowpass";
+  rumbleLP.Q.value = 0.8;
+  rumbleLP.frequency.setValueAtTime(220, now);
+  rumbleLP.frequency.exponentialRampToValueAtTime(55, now + dur);
+  const roll = audioCtx.createGain();         // slow tremolo stage, centred on 0.75
+  roll.gain.value = 0.75;
+  const rollLfo = audioCtx.createOscillator();
+  rollLfo.type = "sine";
+  rollLfo.frequency.value = 8.5;
+  const rollDepth = audioCtx.createGain();
+  rollDepth.gain.value = 0.25;
+  rollLfo.connect(rollDepth);
+  rollDepth.connect(roll.gain);
+  const rumbleGain = audioCtx.createGain();
+  rumbleGain.gain.setValueAtTime(0.0001, now);
+  rumbleGain.gain.exponentialRampToValueAtTime(1.0, now + 0.02);
+  rumbleGain.gain.exponentialRampToValueAtTime(0.55, now + 0.7);
+  rumbleGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  rumble.connect(rumbleLP);
+  rumbleLP.connect(roll);
+  roll.connect(rumbleGain);
+  rumbleGain.connect(master);
+
+  // 4. Crunch burst
+  const crunch = audioCtx.createBufferSource();
+  crunch.buffer = noiseBuffer(0.5);
+  const crunchBP = audioCtx.createBiquadFilter();
+  crunchBP.type = "bandpass";
+  crunchBP.Q.value = 1.2;
+  crunchBP.frequency.setValueAtTime(1100, now);
+  crunchBP.frequency.exponentialRampToValueAtTime(260, now + 0.4);
+  const crunchGain = audioCtx.createGain();
+  crunchGain.gain.setValueAtTime(0.0001, now);
+  crunchGain.gain.exponentialRampToValueAtTime(0.55, now + 0.008);
+  crunchGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+  crunch.connect(crunchBP);
+  crunchBP.connect(crunchGain);
+  crunchGain.connect(master);
+
+  // 5. Debris / tearing-metal ticks
+  for (let i = 0; i < 5; i++) {
+    const t0 = now + 0.08 + Math.random() * 0.9;
+    const tick = audioCtx.createBufferSource();
+    tick.buffer = noiseBuffer(0.2);
+    const tickBP = audioCtx.createBiquadFilter();
+    tickBP.type = "bandpass";
+    tickBP.Q.value = 3;
+    tickBP.frequency.value = 350 + Math.random() * 2000;
+    const tickGain = audioCtx.createGain();
+    tickGain.gain.setValueAtTime(0.0001, t0);
+    tickGain.gain.exponentialRampToValueAtTime(0.35, t0 + 0.005);
+    tickGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06 + Math.random() * 0.08);
+    tick.connect(tickBP);
+    tickBP.connect(tickGain);
+    tickGain.connect(master);
+    tick.start(t0);
+    tick.stop(t0 + 0.2);
+  }
+
+  thump.start(now);
+  sub.start(now);
+  rumble.start(now);
+  rollLfo.start(now);
+  crunch.start(now);
+  thump.stop(end);
+  sub.stop(end);
+  rumble.stop(end);
+  rollLfo.stop(end);
+  crunch.stop(now + 0.5);
+}
